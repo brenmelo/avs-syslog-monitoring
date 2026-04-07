@@ -1,0 +1,16 @@
+# Local files
+*.local.*
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Compiled/cache
+*.pyc
+__pycache__/
+node_modules/

@@ -1,0 +1,639 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "global",
+      "metadata": {
+        "description": "Location for scheduled query rules. Use global unless your organization requires a regional location."
+      }
+    },
+    "workspaceResourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the Log Analytics workspace that contains AVSSyslog."
+      }
+    },
+    "alertNamePrefix": {
+      "type": "string",
+      "defaultValue": "AVS",
+      "metadata": {
+        "description": "Prefix added to all alert rule names."
+      }
+    },
+    "actionGroupIdsSev0": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Action group resource IDs for Sev 0 alerts."
+      }
+    },
+    "actionGroupIdsSev1": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Action group resource IDs for Sev 1 alerts."
+      }
+    },
+    "actionGroupIdsSev2": {
+      "type": "array",
+      "defaultValue": [],
+      "metadata": {
+        "description": "Action group resource IDs for Sev 2 alerts."
+      }
+    },
+    "errThresholdPer15m": {
+      "type": "int",
+      "defaultValue": 5,
+      "minValue": 1,
+      "metadata": {
+        "description": "Threshold for Severity 3 err/error alert (per HostName+AppName in 15 minutes)."
+      }
+    },
+    "dnsFailureThresholdPer15m": {
+      "type": "int",
+      "defaultValue": 10,
+      "minValue": 1,
+      "metadata": {
+        "description": "Threshold for DNS failure alert (per HostName in 15 minutes)."
+      }
+    },
+    "dfwSpikeThresholdPer15m": {
+      "type": "int",
+      "defaultValue": 50,
+      "minValue": 1,
+      "metadata": {
+        "description": "Threshold for distributed firewall blocked traffic spike alert (per HostName in 15 minutes)."
+      }
+    },
+    "deploySev0Emergency": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deploySev0Alert": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deploySev1Critical": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deploySev2Error": {
+      "type": "bool",
+      "defaultValue": false
+    },
+    "deployHostConnectionLost": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployHostShutdown": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployVmDisconnected": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployVmRemovedFromInventory": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployVmGuestReboot": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployDnsFailures": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployDfwSpike": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployHostMaintenanceMode": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployRolePermissionChanges": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deploySyslogIngestionHeartbeat": {
+      "type": "bool",
+      "defaultValue": true
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Syslog-Sev0-Emergency', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deploySev0Emergency')]",
+      "properties": {
+        "displayName": "[format('{0}-Syslog-Sev0-Emergency', parameters('alertNamePrefix'))]",
+        "description": "AVSSyslog Severity emerg/emergency events",
+        "severity": 0,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Severity in (\"emerg\", \"emergency\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Syslog-Sev0-Alert', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deploySev0Alert')]",
+      "properties": {
+        "displayName": "[format('{0}-Syslog-Sev0-Alert', parameters('alertNamePrefix'))]",
+        "description": "AVSSyslog Severity alert events",
+        "severity": 0,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Severity == \"alert\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Syslog-Sev1-Critical', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deploySev1Critical')]",
+      "properties": {
+        "displayName": "[format('{0}-Syslog-Sev1-Critical', parameters('alertNamePrefix'))]",
+        "description": "AVSSyslog Severity crit/critical events",
+        "severity": 1,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Severity in (\"crit\", \"critical\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Syslog-Sev2-Error', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deploySev2Error')]",
+      "properties": {
+        "displayName": "[format('{0}-Syslog-Sev2-Error', parameters('alertNamePrefix'))]",
+        "description": "AVSSyslog Severity err/error above threshold",
+        "severity": 2,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "[concat('AVSSyslog\n| where Severity in (\"err\", \"error\")\n| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, 15m)\n| where ErrorCount > ', string(parameters(''errThresholdPer15m'')))]",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev2')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-Host-ConnectionLost', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployHostConnectionLost')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-Host-ConnectionLost', parameters('alertNamePrefix'))]",
+        "description": "Host lost connection to vCenter",
+        "severity": 0,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Message has \"lost connection to the host\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-Host-Shutdown', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployHostShutdown')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-Host-Shutdown', parameters('alertNamePrefix'))]",
+        "description": "Host shutdown event",
+        "severity": 0,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Message has \"hostshutdownevent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-VM-Disconnected', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployVmDisconnected')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-VM-Disconnected', parameters('alertNamePrefix'))]",
+        "description": "VM disconnected event",
+        "severity": 1,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Message has \"vmdisconnectedevent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-VM-RemovedFromInventory', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployVmRemovedFromInventory')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-VM-RemovedFromInventory', parameters('alertNamePrefix'))]",
+        "description": "VM removed from inventory event",
+        "severity": 1,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Message has \"vmremovedevent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-VM-GuestReboot', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployVmGuestReboot')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-VM-GuestReboot', parameters('alertNamePrefix'))]",
+        "description": "VM guest reboot event",
+        "severity": 2,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Message has \"VmGuestRebootEvent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev2')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-DNS-Failures', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployDnsFailures')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-DNS-Failures', parameters('alertNamePrefix'))]",
+        "description": "DNS failure threshold exceeded",
+        "severity": 1,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "[concat('AVSSyslog\n| where AppName == \"dnsmasq\"\n| where Message has \"Failed DNS Query\"\n| summarize FailureCount = count() by HostName, bin(TimeGenerated, 15m)\n| where FailureCount > ', string(parameters(''dnsFailureThresholdPer15m'')))]",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-NSX-DFW-BlockedSpike', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployDfwSpike')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-NSX-DFW-BlockedSpike', parameters('alertNamePrefix'))]",
+        "description": "Distributed firewall blocked traffic spike",
+        "severity": 2,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "[concat('AVSSyslog\n| where AppName == \"FIREWALL\" or ProcId == \"FIREWALL\"\n| where Message has_any (\"DROP\", \"REJECT\", \"denied\")\n| summarize BlockedCount = count() by HostName, bin(TimeGenerated, 15m)\n| where BlockedCount > ', string(parameters(''dfwSpikeThresholdPer15m'')))]",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev2')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-Host-MaintenanceMode', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployHostMaintenanceMode')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-Host-MaintenanceMode', parameters('alertNamePrefix'))]",
+        "description": "Host maintenance mode enter/exit events",
+        "severity": 2,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev2')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-Security-RoleChange', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployRolePermissionChanges')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-Security-RoleChange', parameters('alertNamePrefix'))]",
+        "description": "Role/permission change events",
+        "severity": 1,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where Message has \"RoleAddedEvent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Meta-Syslog-IngestionHeartbeat', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deploySyslogIngestionHeartbeat')]",
+      "properties": {
+        "displayName": "[format('{0}-Meta-Syslog-IngestionHeartbeat', parameters('alertNamePrefix'))]",
+        "description": "No AVSSyslog ingestion in the last 30 minutes",
+        "severity": 0,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT30M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where TimeGenerated > ago(30m)\n| summarize Count = count()",
+              "timeAggregation": "Count",
+              "operator": "Equal",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+        },
+        "autoMitigate": true
+      }
+    }
+  ],
+  "outputs": {
+    "deployedAlertPrefix": {
+      "type": "string",
+      "value": "[parameters('alertNamePrefix')]"
+    }
+  }
+}
