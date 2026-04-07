@@ -104,7 +104,7 @@
     {
       "type": 1,
       "content": {
-        "json": "## Deploy AVS Syslog Alerts\n\n[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FREPLACE-ORG%2FREPLACE-REPO%2Fmain%2Favs-syslog-alerts-deploy-template.json)\n\nUse this button to launch a template-driven deployment that lets users select which alerts to deploy (one boolean checkbox per alert in the deployment form).\n\n> Replace `REPLACE-ORG/REPLACE-REPO` with your repository path where the alert deployment template is hosted.\n\n---"
+        "json": "## Deploy AVS Syslog Alerts\n\n[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-alerts%2Fmain%2Favs-syslog-alerts-deploy-template.json)\n\nClick the button above to launch the ARM template deployment with per-alert selection checkboxes. Each alert in the form corresponds to a boolean parameter you can enable/disable.\n\n---"
       },
       "name": "section-deploy-alerts"
     },
