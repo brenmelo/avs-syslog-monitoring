@@ -1,0 +1,298 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "config": {
+      "isWizard": true,
+      "basics": {
+        "description": "Deploy AVS Syslog alert rules to monitor your Azure VMware Solution private cloud. This wizard lets you pick which alerts to enable and configure notification action groups.",
+        "location": {
+          "visible": false
+        },
+        "subscription": {
+          "resourceProviders": ["Microsoft.Insights"]
+        },
+        "resourceGroup": {
+          "allowExisting": true
+        }
+      }
+    },
+    "basics": [
+      {
+        "name": "workspaceSelector",
+        "type": "Microsoft.Solutions.ResourceSelector",
+        "label": "Log Analytics Workspace",
+        "toolTip": "The workspace that receives AVSSyslog data from your AVS private cloud diagnostic setting.",
+        "resourceType": "Microsoft.OperationalInsights/workspaces",
+        "options": {
+          "filter": {
+            "subscription": "onBasics",
+            "location": "all"
+          }
+        }
+      },
+      {
+        "name": "alertNamePrefix",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Alert Name Prefix",
+        "defaultValue": "AVS",
+        "toolTip": "Prefix added to every alert rule name, e.g. AVS-Syslog-Sev0-Emergency.",
+        "constraints": {
+          "required": true,
+          "regex": "^[a-zA-Z0-9-]{1,20}$",
+          "validationMessage": "Only letters, numbers, and hyphens. Max 20 characters."
+        }
+      }
+    ],
+    "steps": [
+      {
+        "name": "notifications",
+        "label": "Action Groups",
+        "elements": [
+          {
+            "name": "infoBox",
+            "type": "Microsoft.Common.InfoBox",
+            "options": {
+              "text": "Select the action groups that will be notified when alerts fire. You can use the same group for all severities or separate groups. If you don't have one yet, create an Action Group first (Monitor → Action Groups).",
+              "style": "Info"
+            }
+          },
+          {
+            "name": "enableSev0AG",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Assign action group for Severity 0 alerts (Emergency, Alert, Host-down, Heartbeat)"
+          },
+          {
+            "name": "actionGroupSev0",
+            "type": "Microsoft.Solutions.ResourceSelector",
+            "label": "Action Group — Severity 0",
+            "toolTip": "Notified for the most critical alerts.",
+            "resourceType": "Microsoft.Insights/actionGroups",
+            "visible": "[basics('enableSev0AG')]",
+            "options": {
+              "filter": {
+                "subscription": "onBasics",
+                "location": "all"
+              }
+            }
+          },
+          {
+            "name": "enableSev1AG",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Assign action group for Severity 1 alerts (Critical, VM, DNS, Role changes)"
+          },
+          {
+            "name": "actionGroupSev1",
+            "type": "Microsoft.Solutions.ResourceSelector",
+            "label": "Action Group — Severity 1",
+            "toolTip": "Notified for high-priority alerts.",
+            "resourceType": "Microsoft.Insights/actionGroups",
+            "visible": "[basics('enableSev1AG')]",
+            "options": {
+              "filter": {
+                "subscription": "onBasics",
+                "location": "all"
+              }
+            }
+          },
+          {
+            "name": "enableSev2AG",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Assign action group for Severity 2 alerts (Error, DFW, Maintenance, Guest Reboot)"
+          },
+          {
+            "name": "actionGroupSev2",
+            "type": "Microsoft.Solutions.ResourceSelector",
+            "label": "Action Group — Severity 2",
+            "toolTip": "Notified for moderate-priority alerts.",
+            "resourceType": "Microsoft.Insights/actionGroups",
+            "visible": "[basics('enableSev2AG')]",
+            "options": {
+              "filter": {
+                "subscription": "onBasics",
+                "location": "all"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "alertSelection",
+        "label": "Select Alerts",
+        "elements": [
+          {
+            "name": "severitySection",
+            "type": "Microsoft.Common.Section",
+            "label": "Part 1 — Severity-Based Alerts",
+            "elements": [
+              {
+                "name": "deploySev0Emergency",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Sev 0 — Emergency (emerg / emergency)",
+                "defaultValue": true
+              },
+              {
+                "name": "deploySev0Alert",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Sev 0 — Alert",
+                "defaultValue": true
+              },
+              {
+                "name": "deploySev1Critical",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Sev 1 — Critical (crit / critical)",
+                "defaultValue": true
+              },
+              {
+                "name": "deploySev2Error",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Sev 2 — Error (err / error) — optional, can be noisy",
+                "defaultValue": false
+              }
+            ]
+          },
+          {
+            "name": "eventSection",
+            "type": "Microsoft.Common.Section",
+            "label": "Part 2 — Event-Specific Alerts",
+            "elements": [
+              {
+                "name": "deployHostConnectionLost",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Host Connection Lost",
+                "defaultValue": true
+              },
+              {
+                "name": "deployHostShutdown",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Host Shutdown",
+                "defaultValue": true
+              },
+              {
+                "name": "deployVmDisconnected",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "VM Disconnected",
+                "defaultValue": true
+              },
+              {
+                "name": "deployVmRemovedFromInventory",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "VM Removed from Inventory",
+                "defaultValue": true
+              },
+              {
+                "name": "deployVmGuestReboot",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "VM Guest Reboot",
+                "defaultValue": true
+              },
+              {
+                "name": "deployDnsFailures",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "DNS Failures (threshold-based)",
+                "defaultValue": true
+              },
+              {
+                "name": "deployDfwSpike",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Distributed Firewall Blocked Spike (threshold-based)",
+                "defaultValue": true
+              },
+              {
+                "name": "deployHostMaintenanceMode",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Host Maintenance Mode",
+                "defaultValue": true
+              },
+              {
+                "name": "deployRolePermissionChanges",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Role / Permission Changes (Security Audit)",
+                "defaultValue": true
+              },
+              {
+                "name": "deploySyslogIngestionHeartbeat",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Syslog Ingestion Heartbeat (no-data alert)",
+                "defaultValue": true
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "thresholds",
+        "label": "Thresholds",
+        "elements": [
+          {
+            "name": "infoBox",
+            "type": "Microsoft.Common.InfoBox",
+            "options": {
+              "text": "Set alert thresholds for volume-based alerts. These thresholds apply per host per 15-minute evaluation window.",
+              "style": "Info"
+            }
+          },
+          {
+            "name": "errThresholdPer15m",
+            "type": "Microsoft.Common.Slider",
+            "label": "Error events threshold (per 15 min)",
+            "subLabel": "events",
+            "defaultValue": 5,
+            "min": 1,
+            "max": 100,
+            "showStepMarkers": false,
+            "toolTip": "Number of err/error events per HostName + AppName in 15 minutes before alerting."
+          },
+          {
+            "name": "dnsFailureThresholdPer15m",
+            "type": "Microsoft.Common.Slider",
+            "label": "DNS failure threshold (per 15 min)",
+            "subLabel": "failures",
+            "defaultValue": 10,
+            "min": 1,
+            "max": 200,
+            "showStepMarkers": false,
+            "toolTip": "Number of DNS failures per host in 15 minutes before alerting."
+          },
+          {
+            "name": "dfwSpikeThresholdPer15m",
+            "type": "Microsoft.Common.Slider",
+            "label": "DFW blocked spike threshold (per 15 min)",
+            "subLabel": "blocks",
+            "defaultValue": 50,
+            "min": 1,
+            "max": 500,
+            "showStepMarkers": false,
+            "toolTip": "Number of blocked firewall events per host in 15 minutes before alerting."
+          }
+        ]
+      }
+    ],
+    "outputs": {
+      "location": "global",
+      "workspaceResourceId": "[basics('workspaceSelector').id]",
+      "alertNamePrefix": "[basics('alertNamePrefix')]",
+      "actionGroupIdSev0": "[if(steps('notifications').enableSev0AG, steps('notifications').actionGroupSev0.id, '')]",
+      "actionGroupIdSev1": "[if(steps('notifications').enableSev1AG, steps('notifications').actionGroupSev1.id, '')]",
+      "actionGroupIdSev2": "[if(steps('notifications').enableSev2AG, steps('notifications').actionGroupSev2.id, '')]",
+      "errThresholdPer15m": "[steps('thresholds').errThresholdPer15m]",
+      "dnsFailureThresholdPer15m": "[steps('thresholds').dnsFailureThresholdPer15m]",
+      "dfwSpikeThresholdPer15m": "[steps('thresholds').dfwSpikeThresholdPer15m]",
+      "deploySev0Emergency": "[steps('alertSelection').severitySection.deploySev0Emergency]",
+      "deploySev0Alert": "[steps('alertSelection').severitySection.deploySev0Alert]",
+      "deploySev1Critical": "[steps('alertSelection').severitySection.deploySev1Critical]",
+      "deploySev2Error": "[steps('alertSelection').severitySection.deploySev2Error]",
+      "deployHostConnectionLost": "[steps('alertSelection').eventSection.deployHostConnectionLost]",
+      "deployHostShutdown": "[steps('alertSelection').eventSection.deployHostShutdown]",
+      "deployVmDisconnected": "[steps('alertSelection').eventSection.deployVmDisconnected]",
+      "deployVmRemovedFromInventory": "[steps('alertSelection').eventSection.deployVmRemovedFromInventory]",
+      "deployVmGuestReboot": "[steps('alertSelection').eventSection.deployVmGuestReboot]",
+      "deployDnsFailures": "[steps('alertSelection').eventSection.deployDnsFailures]",
+      "deployDfwSpike": "[steps('alertSelection').eventSection.deployDfwSpike]",
+      "deployHostMaintenanceMode": "[steps('alertSelection').eventSection.deployHostMaintenanceMode]",
+      "deployRolePermissionChanges": "[steps('alertSelection').eventSection.deployRolePermissionChanges]",
+      "deploySyslogIngestionHeartbeat": "[steps('alertSelection').eventSection.deploySyslogIngestionHeartbeat]"
+    }
+  }
+}
