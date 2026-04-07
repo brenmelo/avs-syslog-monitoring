@@ -12,7 +12,8 @@
     "workspaceResourceId": {
       "type": "string",
       "metadata": {
-        "description": "Resource ID of the Log Analytics workspace that contains AVSSyslog."
+        "description": "Resource ID of the Log Analytics workspace that contains AVSSyslog.",
+        "strongType": "Microsoft.OperationalInsights/workspaces"
       }
     },
     "alertNamePrefix": {
@@ -22,25 +23,28 @@
         "description": "Prefix added to all alert rule names."
       }
     },
-    "actionGroupIdsSev0": {
-      "type": "array",
-      "defaultValue": [],
+    "actionGroupIdSev0": {
+      "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "description": "Action group resource IDs for Sev 0 alerts."
+        "description": "Action group for Sev 0 alerts (Emergency, Alert, Host-down, Heartbeat).",
+        "strongType": "Microsoft.Insights/actionGroups"
       }
     },
-    "actionGroupIdsSev1": {
-      "type": "array",
-      "defaultValue": [],
+    "actionGroupIdSev1": {
+      "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "description": "Action group resource IDs for Sev 1 alerts."
+        "description": "Action group for Sev 1 alerts (Critical, VM, DNS, Role changes).",
+        "strongType": "Microsoft.Insights/actionGroups"
       }
     },
-    "actionGroupIdsSev2": {
-      "type": "array",
-      "defaultValue": [],
+    "actionGroupIdSev2": {
+      "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "description": "Action group resource IDs for Sev 2 alerts."
+        "description": "Action group for Sev 2 alerts (Error, DFW, Maintenance, Guest Reboot).",
+        "strongType": "Microsoft.Insights/actionGroups"
       }
     },
     "errThresholdPer15m": {
@@ -124,6 +128,11 @@
       "defaultValue": true
     }
   },
+  "variables": {
+    "actionGroupsSev0": "[if(empty(parameters('actionGroupIdSev0')), createArray(), createArray(parameters('actionGroupIdSev0')))]",
+    "actionGroupsSev1": "[if(empty(parameters('actionGroupIdSev1')), createArray(), createArray(parameters('actionGroupIdSev1')))]",
+    "actionGroupsSev2": "[if(empty(parameters('actionGroupIdSev2')), createArray(), createArray(parameters('actionGroupIdSev2')))]"
+  },
   "resources": [
     {
       "type": "Microsoft.Insights/scheduledQueryRules",
@@ -156,7 +165,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+          "actionGroups": "[variables('actionGroupsSev0')]"
         },
         "autoMitigate": true
       }
@@ -192,7 +201,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+          "actionGroups": "[variables('actionGroupsSev0')]"
         },
         "autoMitigate": true
       }
@@ -228,7 +237,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+          "actionGroups": "[variables('actionGroupsSev1')]"
         },
         "autoMitigate": true
       }
@@ -264,7 +273,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev2')]"
+          "actionGroups": "[variables('actionGroupsSev2')]"
         },
         "autoMitigate": true
       }
@@ -300,7 +309,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+          "actionGroups": "[variables('actionGroupsSev0')]"
         },
         "autoMitigate": true
       }
@@ -336,7 +345,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+          "actionGroups": "[variables('actionGroupsSev0')]"
         },
         "autoMitigate": true
       }
@@ -372,7 +381,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+          "actionGroups": "[variables('actionGroupsSev1')]"
         },
         "autoMitigate": true
       }
@@ -408,7 +417,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+          "actionGroups": "[variables('actionGroupsSev1')]"
         },
         "autoMitigate": true
       }
@@ -444,7 +453,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev2')]"
+          "actionGroups": "[variables('actionGroupsSev2')]"
         },
         "autoMitigate": true
       }
@@ -480,7 +489,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+          "actionGroups": "[variables('actionGroupsSev1')]"
         },
         "autoMitigate": true
       }
@@ -516,7 +525,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev2')]"
+          "actionGroups": "[variables('actionGroupsSev2')]"
         },
         "autoMitigate": true
       }
@@ -552,7 +561,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev2')]"
+          "actionGroups": "[variables('actionGroupsSev2')]"
         },
         "autoMitigate": true
       }
@@ -588,7 +597,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev1')]"
+          "actionGroups": "[variables('actionGroupsSev1')]"
         },
         "autoMitigate": true
       }
@@ -624,7 +633,7 @@
           ]
         },
         "actions": {
-          "actionGroups": "[parameters('actionGroupIdsSev0')]"
+          "actionGroups": "[variables('actionGroupsSev0')]"
         },
         "autoMitigate": true
       }
