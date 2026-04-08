@@ -14,6 +14,25 @@ Pre-built Azure Monitor alert rules and an Azure Monitor Workbook for monitoring
 | **Log Analytics workspace** | The workspace that receives `AVSSyslog` data. |
 | **Action Group(s)** | At least one [Action Group](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/action-groups) (email, SMS, webhook, etc.) for alert notifications. You can use one group for all severities or separate groups per severity level. |
 
+### Configure AVS Syslog Forwarding
+
+Before deploying alerts, your AVS private cloud must be sending syslog data to a Log Analytics workspace. If you haven't done this yet:
+
+1. In the Azure portal, navigate to your **Azure VMware Solution** private cloud.
+2. Go to **Diagnostic settings** → **+ Add diagnostic setting**.
+3. Check the **Syslog** category.
+4. Under **Destination details**, select **Send to Log Analytics workspace** and choose your workspace.
+5. Click **Save**.
+
+After a few minutes, the `AVSSyslog` table will begin receiving data. You can verify with:
+
+```kql
+AVSSyslog
+| take 10
+```
+
+> For full configuration details, see [Configure VMware syslogs for Azure VMware Solution](https://learn.microsoft.com/en-us/azure/azure-vmware/configure-vmware-syslogs).
+
 ---
 
 ## Quick Start
