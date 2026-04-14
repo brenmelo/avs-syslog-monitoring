@@ -149,6 +149,30 @@ All alert rules use an **evaluation frequency of 5 minutes** with a **lookback w
   - **Longer window (e.g. 30 min)** — More tolerant of transient spikes, but slower to detect sustained issues.
 - If you create alerts manually (Option D), use the values in the tables below, or adjust to match your operational requirements.
 
+### Understanding Syslog Severity Levels
+
+Syslog uses eight standard severity levels defined in [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1). This solution focuses on **Severity 0–3** as high-impact events that warrant alerting:
+
+| Level | Keyword | Meaning | Alerting Strategy |
+|:---:|---|---|---|
+| **0** | `emerg` / `emergency` | System is unusable | **Alert immediately** — any occurrence |
+| **1** | `alert` | Immediate action required | **Alert immediately** — any occurrence |
+| **2** | `crit` / `critical` | Critical condition (e.g. hardware failure) | **Alert immediately** — any occurrence |
+| **3** | `err` / `error` | Error condition | **Optional** — threshold-based (can be noisy) |
+| 4 | `warning` | Warning — may indicate a developing issue | Monitor in workbook (no alert by default) |
+| 5 | `notice` | Normal but noteworthy | Monitor in workbook |
+| 6 | `info` | Informational | Monitor in workbook |
+| 7 | `debug` | Debug-level detail | Monitor in workbook |
+
+> **Important — Dual Severity Forms:** VMware systems may log both the abbreviated form (`emerg`, `crit`, `err`) and the full-word form (`emergency`, `critical`, `error`). All queries in this solution use `Severity in ("emerg", "emergency")` etc. to match both forms and prevent missed events.
+
+**Why only Severity 0–3?**
+- Severity 0–2 events (`emerg`, `alert`, `crit`) are rare and almost always indicate a real problem — they should trigger immediate alerts.
+- Severity 3 (`err`/`error`) events are more common and can include routine errors. The Sev2-Error alert is **disabled by default** with a configurable threshold (default: 5 per host per 15 min) to avoid alert fatigue. Enable it only after reviewing your baseline.
+- Severity 4–7 (`warning` through `debug`) generate high volume and are best monitored visually in the workbook rather than via alerts.
+
+In addition to severity-based alerts, this solution provides **10 event-specific alerts** (Part 2) that detect specific VMware events in the `Message` field — such as host failures, VM disconnections, DNS failures, and firewall blocks — regardless of what severity level they were logged at.
+
 ### Part 1 — Severity-Based Alerts
 
 These alerts fire based on the syslog `Severity` field value. VMware may log abbreviated (`emerg`, `crit`, `err`) or full-word (`emergency`, `critical`, `error`) forms — queries match both.
@@ -475,23 +499,6 @@ With the default prefix `AVS`:
 | `deployHostMaintenanceMode` | bool | `true` | Host Maintenance Mode alert. |
 | `deployRolePermissionChanges` | bool | `true` | Role/Permission Changes alert. |
 | `deploySyslogIngestionHeartbeat` | bool | `true` | Syslog Ingestion Heartbeat alert. |
-
----
-
-## Syslog Severity Reference (RFC 5424)
-
-| Code | Keyword | Description |
-|:---:|---|---|
-| 0 | `emerg` / `emergency` | System is unusable |
-| 1 | `alert` | Action must be taken immediately |
-| 2 | `crit` / `critical` | Critical conditions |
-| 3 | `err` / `error` | Error conditions |
-| 4 | `warning` | Warning conditions |
-| 5 | `notice` | Normal but significant condition |
-| 6 | `info` | Informational messages |
-| 7 | `debug` | Debug-level messages |
-
-> **Note:** VMware systems may log both abbreviated and full-word severity forms. All queries in this solution match both to prevent missed events.
 
 ---
 
