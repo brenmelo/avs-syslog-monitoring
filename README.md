@@ -158,8 +158,10 @@ These alerts fire based on the syslog `Severity` field value. VMware may log abb
 | Property | Value |
 |---|---|
 | **Azure Severity** | 0 |
-| **Threshold** | > 0 (any occurrence) |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -173,8 +175,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 0 |
-| **Threshold** | > 0 |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -188,8 +192,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 1 |
-| **Threshold** | > 0 |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -203,8 +209,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 2 |
-| **Threshold** | > 5 per HostName + AppName (configurable) |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 (query pre-filters at > 5 per HostName + AppName — configurable) |
 | **Default** | ❌ Disabled |
 
 ```kql
@@ -225,8 +233,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 0 |
-| **Threshold** | > 0 |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -240,8 +250,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 0 |
-| **Threshold** | > 0 |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -255,8 +267,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 1 |
-| **Threshold** | > 0 |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -270,8 +284,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 1 |
-| **Threshold** | > 0 |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -285,8 +301,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 2 |
-| **Threshold** | > 0 |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -300,8 +318,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 1 |
-| **Threshold** | > 10 per host (configurable) |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 (query pre-filters at > 10 per host — configurable) |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -319,8 +339,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 2 |
-| **Threshold** | > 50 per host (configurable) |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 (query pre-filters at > 50 per host — configurable) |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -338,8 +360,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 2 |
-| **Threshold** | > 0 |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -353,8 +377,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 1 |
-| **Threshold** | > 0 |
-| **Window** | 15 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 15 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
 ```kql
@@ -368,8 +394,10 @@ AVSSyslog
 | Property | Value |
 |---|---|
 | **Azure Severity** | 0 |
-| **Threshold** | == 0 (fires when **no** data arrives) |
-| **Window** | 30 min |
+| **Frequency** | Every 5 minutes |
+| **Lookback Window** | 30 minutes |
+| **Aggregation** | Count |
+| **Operator / Threshold** | Equal to 0 (fires when **no** data arrives) |
 | **Default** | ✅ Enabled |
 
 ```kql
