@@ -18,7 +18,7 @@ Before deploying, your AVS private cloud must be sending syslog data to a Log An
 
 1. In the Azure portal, navigate to your **Azure VMware Solution** private cloud.
 2. Go to **Diagnostic settings** → **+ Add diagnostic setting**.
-3. Check the **vmwaresyslog** category (this includes vCenter, ESXi, vSAN, NSX, and firewall logs).
+3. Check the **VMware Syslog** category (this includes vCenter, ESXi, vSAN, NSX, and firewall logs).
 4. Under **Destination details**, select **Send to Log Analytics workspace** and choose your workspace.
 5. Click **Save**.
 
