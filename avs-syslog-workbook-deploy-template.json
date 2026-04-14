@@ -108,20 +108,6 @@
               "{Workspace}"
             ],
             "resourceType": "microsoft.operationalinsights/workspaces"
-          },
-          {
-            "queryType": 0,
-            "resourceType": "microsoft.operationalinsights/workspaces",
-            "isHiddenWhenLocked": true,
-            "isRequired": false,
-            "name": "_tableExists",
-            "version": "KqlParameterItem/1.0",
-            "crossComponentResources": [
-              "{Workspace}"
-            ],
-            "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime)[])\n| summarize c = count()\n| project value = iff(c > 0, \"yes\", \"no\")",
-            "type": 1,
-            "id": "_tableExists"
           }
         ],
         "style": "pills",
@@ -169,18 +155,6 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "table-validation"
-    },
-    {
-      "type": 1,
-      "content": {
-        "json": "### ⚠️ No Data\n\nThe **AVSSyslog** table was not found in the selected workspace. Panels below will appear once syslog data is flowing.\n\n> **Steps:** AVS private cloud → Diagnostic settings → Add diagnostic setting → select Syslog category → send to this workspace."
-      },
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "no"
-      },
-      "name": "no-data-fallback"
     },
     {
       "type": 1,
@@ -294,12 +268,7 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "Severity-pie",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "Severity-pie"
     },
     {
       "type": 3,
@@ -322,12 +291,7 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "top-sources-bar",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "top-sources-bar"
     },
     {
       "type": 1,
@@ -385,12 +349,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "Severity-trend",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "Severity-trend"
     },
     {
       "type": 3,
@@ -399,7 +358,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
         "size": 1,
         "title": "🔴 Emergency Events (Severity 0 — emerg): System is unusable",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "table",
         "gridSettings": {
@@ -433,12 +392,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "emerg-grid",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "emerg-grid"
     },
     {
       "type": 3,
@@ -447,7 +401,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
         "size": 1,
         "title": "🔴 Alert Events (Severity 1 — alert): Immediate action required",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "table",
         "gridSettings": {
@@ -475,12 +429,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "alert-grid",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "alert-grid"
     },
     {
       "type": 3,
@@ -489,7 +438,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
         "size": 1,
         "title": "🟠 Critical Events (Severity 2 — crit): Critical condition",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "table",
         "gridSettings": {
@@ -523,12 +472,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "crit-grid",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "crit-grid"
     },
     {
       "type": 3,
@@ -544,12 +488,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "err-trend",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "err-trend"
     },
     {
       "type": 1,
@@ -579,12 +518,7 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "err-by-source",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "err-by-source"
     },
     {
       "type": 3,
@@ -613,12 +547,7 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "err-top-repeated",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "err-top-repeated"
     },
     {
       "type": 3,
@@ -627,7 +556,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"err\", \"error\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 200",
         "size": 1,
         "title": "🟡 Error Events Detail (Severity 3 — err): Error condition",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "table",
         "gridSettings": {
@@ -661,12 +590,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "err-grid",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "err-grid"
     },
     {
       "type": 1,
@@ -718,12 +642,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "event-summary-tiles",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "event-summary-tiles"
     },
     {
       "type": 3,
@@ -732,7 +651,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"lost connection to the host\", \"hostshutdownevent\", \"hostaddedevent\", \"hostconnectedevent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
         "size": 1,
         "title": "Host Events (connection lost, shutdown, added, connected)",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "table",
         "showExportToExcel": true,
@@ -741,12 +660,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "host-events-grid",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "host-events-grid"
     },
     {
       "type": 3,
@@ -755,7 +669,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"vmdisconnectedevent\", \"vmremovedevent\", \"VmGuestRebootEvent\", \"VmPowerStateChangedEvent\", \"vmcreatedevent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
         "size": 1,
         "title": "VM Events (disconnected, deleted, rebooted, power change, created)",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "table",
         "showExportToExcel": true,
@@ -764,12 +678,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "vm-events-grid",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "vm-events-grid"
     },
     {
       "type": 3,
@@ -778,7 +687,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where AppName == \"dnsmasq\" and Message has \"Failed DNS Query\"\n| summarize FailureCount = count() by HostName, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
         "size": 0,
         "title": "DNS Failures Over Time",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "linechart",
         "chartSettings": {
@@ -792,12 +701,7 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "dns-failures-trend",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "dns-failures-trend"
     },
     {
       "type": 3,
@@ -806,7 +710,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where AppName == \"FIREWALL\" or ProcId == \"FIREWALL\"\n| where Message has_any (\"DROP\", \"REJECT\", \"denied\")\n| summarize BlockedCount = count() by HostName, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
         "size": 0,
         "title": "Distributed Firewall Blocked Traffic Over Time",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "linechart",
         "chartSettings": {
@@ -820,12 +724,7 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "dfw-blocked-trend",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "dfw-blocked-trend"
     },
     {
       "type": 3,
@@ -834,7 +733,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 50",
         "size": 1,
         "title": "Host Maintenance Mode Changes",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "table",
         "showExportToExcel": true,
@@ -844,12 +743,7 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "maintenance-grid",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "maintenance-grid"
     },
     {
       "type": 3,
@@ -858,7 +752,7 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has \"RoleAddedEvent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 50",
         "size": 1,
         "title": "Role / Permission Changes (Security Audit)",
-        "noDataMessage": "🟢 HEALTHY",
+        "noDataMessage": "⚠️ No Data",
         "queryType": 0,
         "visualization": "table",
         "showExportToExcel": true,
@@ -868,12 +762,7 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "role-changes-grid",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "role-changes-grid"
     },
     {
       "type": 1,
@@ -936,12 +825,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "host-Severity-heatmap",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "host-Severity-heatmap"
     },
     {
       "type": 3,
@@ -962,12 +846,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "host-Severity-trend",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "host-Severity-trend"
     },
     {
       "type": 1,
@@ -1005,12 +884,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "heartbeat-tile",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "heartbeat-tile"
     },
     {
       "type": 3,
@@ -1037,12 +911,7 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "ingestion-volume",
-      "conditionalVisibility": {
-        "comparison": "isEqualTo",
-        "parameterName": "_tableExists",
-        "value": "yes"
-      }
+      "name": "ingestion-volume"
     },
     {
       "type": 1,
