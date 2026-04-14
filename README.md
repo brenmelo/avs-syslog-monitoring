@@ -81,19 +81,31 @@ Once deployed, the workbook includes:
 
 ## 2. Deploy the Alert Rules
 
-### Option A — One-click Deploy (recommended)
+### Option A — Deploy from the Workbook (recommended)
 
-[![Deploy Alerts to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-syslog-alerts-deploy-template.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2FcreateUiDefinition.json)
+If you deployed the workbook in Step 1, open it and click the **Deploy to Azure** button at the top of the workbook:
 
-1. Click the button above.
-2. A guided wizard walks you through:
+![Deploy from Workbook](images/workbook-deploy-button.png)
+
+1. Open your deployed workbook: **Monitor → Workbooks → AVS Syslog Monitoring**.
+2. Select your **Log Analytics Workspace** from the dropdown at the top.
+3. Click the **Deploy to Azure** button shown above.
+4. A guided wizard walks you through:
    - **Basics** — Subscription, resource group, Log Analytics workspace.
    - **Action Groups** — Pick existing action groups for Severity 0, 1, and 2.
    - **Select Alerts** — Check or uncheck each of the 14 alert rules.
    - **Thresholds** — Sliders for volume-based alerts (Error, DNS, DFW).
+5. Click **Review + create** → **Create**.
+
+### Option B — One-click Deploy (standalone)
+
+[![Deploy Alerts to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-syslog-alerts-deploy-template.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2FcreateUiDefinition.json)
+
+1. Click the button above (opens the same wizard directly without needing the workbook).
+2. Follow the same guided wizard steps as Option A.
 3. Click **Review + create** → **Create**.
 
-### Option B — Azure CLI (all alerts at once)
+### Option C — Azure CLI (all alerts at once)
 
 ```bash
 az deployment group create \
@@ -105,7 +117,7 @@ az deployment group create \
                actionGroupIdSev2="<action-group-resource-id>"
 ```
 
-### Option C — Manual Alert Creation (Azure Portal)
+### Option D — Manual Alert Creation (Azure Portal)
 
 Create individual alert rules from **Monitor → Alerts → + Create → Alert rule**:
 
