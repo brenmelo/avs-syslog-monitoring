@@ -108,6 +108,20 @@
               "{Workspace}"
             ],
             "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          {
+            "queryType": 0,
+            "resourceType": "microsoft.operationalinsights/workspaces",
+            "isHiddenWhenLocked": true,
+            "isRequired": false,
+            "name": "_tableExists",
+            "version": "KqlParameterItem/1.0",
+            "crossComponentResources": [
+              "{Workspace}"
+            ],
+            "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime)[])\n| summarize c = count()\n| project value = iff(c > 0, \"yes\", \"no\")",
+            "type": 1,
+            "id": "_tableExists"
           }
         ],
         "style": "pills",
@@ -155,6 +169,18 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "table-validation"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "### ⚠️ No Data\n\nThe **AVSSyslog** table was not found in the selected workspace. Panels below will appear once syslog data is flowing.\n\n> **Steps:** AVS private cloud → Diagnostic settings → Add diagnostic setting → select Syslog category → send to this workspace."
+      },
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "no"
+      },
+      "name": "no-data-fallback"
     },
     {
       "type": 1,
@@ -268,7 +294,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "Severity-pie"
+      "name": "Severity-pie",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -291,7 +322,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "top-sources-bar"
+      "name": "top-sources-bar",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 1,
@@ -349,7 +385,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "Severity-trend"
+      "name": "Severity-trend",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -392,7 +433,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "emerg-grid"
+      "name": "emerg-grid",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -429,7 +475,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "alert-grid"
+      "name": "alert-grid",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -472,7 +523,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "crit-grid"
+      "name": "crit-grid",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -488,7 +544,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "err-trend"
+      "name": "err-trend",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 1,
@@ -518,7 +579,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "err-by-source"
+      "name": "err-by-source",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -547,7 +613,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "err-top-repeated"
+      "name": "err-top-repeated",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -590,7 +661,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "err-grid"
+      "name": "err-grid",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 1,
@@ -599,13 +675,13 @@
       },
       "name": "section-part2"
     },
-      {
-        "type": 1,
-        "content": {
-          "json": "#### What these event panels mean\n\n- **Host Events (connection lost, shutdown, added, connected)**: Tracks major host lifecycle and connectivity changes. A lost connection or shutdown may indicate host instability, maintenance, or an outage; added/connected events usually indicate recovery, expansion, or re-registration.\n- **DNS Failures Over Time**: Shows failed DNS lookups from VMware components. Persistent failures can break name resolution for services, updates, cluster operations, or external integrations.\n- **Distributed Firewall Blocked Traffic Over Time**: Shows traffic denied by the NSX distributed firewall. Some blocks are expected by policy, but spikes or unexpected blocks can indicate misconfiguration or application connectivity problems.\n- **Host Maintenance Mode Changes**: Tracks hosts entering or exiting maintenance mode. This is often expected during patching or operational work, but unexpected changes can explain VM movement, reduced capacity, or service impact.\n- **Role / Permission Changes (Security Audit)**: Tracks permission or role assignment changes such as `RoleAddedEvent`. These are important for security review because they may reflect legitimate admin activity or unauthorized privilege changes."
-        },
-        "name": "section-part2-explanation"
+    {
+      "type": 1,
+      "content": {
+        "json": "#### What these event panels mean\n\n- **Host Events (connection lost, shutdown, added, connected)**: Tracks major host lifecycle and connectivity changes. A lost connection or shutdown may indicate host instability, maintenance, or an outage; added/connected events usually indicate recovery, expansion, or re-registration.\n- **DNS Failures Over Time**: Shows failed DNS lookups from VMware components. Persistent failures can break name resolution for services, updates, cluster operations, or external integrations.\n- **Distributed Firewall Blocked Traffic Over Time**: Shows traffic denied by the NSX distributed firewall. Some blocks are expected by policy, but spikes or unexpected blocks can indicate misconfiguration or application connectivity problems.\n- **Host Maintenance Mode Changes**: Tracks hosts entering or exiting maintenance mode. This is often expected during patching or operational work, but unexpected changes can explain VM movement, reduced capacity, or service impact.\n- **Role / Permission Changes (Security Audit)**: Tracks permission or role assignment changes such as `RoleAddedEvent`. These are important for security review because they may reflect legitimate admin activity or unauthorized privilege changes."
       },
+      "name": "section-part2-explanation"
+    },
     {
       "type": 3,
       "content": {
@@ -642,7 +718,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "event-summary-tiles"
+      "name": "event-summary-tiles",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -660,7 +741,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "host-events-grid"
+      "name": "host-events-grid",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -678,7 +764,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "vm-events-grid"
+      "name": "vm-events-grid",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -701,7 +792,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "dns-failures-trend"
+      "name": "dns-failures-trend",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -724,7 +820,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "dfw-blocked-trend"
+      "name": "dfw-blocked-trend",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -743,7 +844,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "maintenance-grid"
+      "name": "maintenance-grid",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -762,7 +868,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "role-changes-grid"
+      "name": "role-changes-grid",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 1,
@@ -825,7 +936,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "host-Severity-heatmap"
+      "name": "host-Severity-heatmap",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -846,7 +962,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "host-Severity-trend"
+      "name": "host-Severity-trend",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 1,
@@ -884,7 +1005,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "heartbeat-tile"
+      "name": "heartbeat-tile",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 3,
@@ -911,7 +1037,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "ingestion-volume"
+      "name": "ingestion-volume",
+      "conditionalVisibility": {
+        "comparison": "isEqualTo",
+        "parameterName": "_tableExists",
+        "value": "yes"
+      }
     },
     {
       "type": 1,
