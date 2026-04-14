@@ -93,7 +93,7 @@
                 "multiSelect": true,
                 "quote": "'",
                 "delimiter": ",",
-                "jsonData": "[\"emerg\",\"alert\",\"crit\",\"err\",\"warning\",\"notice\",\"info\",\"debug\"]",
+                "jsonData": "[[\"emerg\",\"alert\",\"crit\",\"err\",\"warning\",\"notice\",\"info\",\"debug\"]",
                 "typeSettings": {
                   "additionalResourceOptions": ["value::all"],
                   "showDefault": false
