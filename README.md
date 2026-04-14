@@ -134,6 +134,21 @@ Repeat for each alert you want. The full KQL queries are listed below.
 
 ## Alert Rules Reference
 
+### Evaluation Window & Frequency
+
+All alert rules use an **evaluation frequency of 5 minutes** with a **lookback window of 15 minutes** (except the Ingestion Heartbeat alert, which uses a 30-minute window). These are the same values used by the **Deploy to Azure** button — no adjustment is needed after deployment.
+
+**Why 15 minutes?**
+- A 15-minute window with a 5-minute evaluation frequency means each check scans the last 15 minutes of data. This provides three overlapping evaluation cycles per window, which reduces the chance of missing a transient event that arrives near an evaluation boundary.
+- It also smooths out short bursts — a single stray error won't immediately trigger threshold-based alerts (Error, DNS, DFW), but a sustained pattern within 15 minutes will.
+- The Heartbeat alert uses 30 minutes because brief ingestion delays (a few minutes) are normal; only a prolonged gap signals a real pipeline problem.
+
+**Should you adjust it?**
+- For most environments, the defaults work well. You can adjust them after deployment in **Monitor → Alerts → Alert rules → Edit**:
+  - **Shorter window (e.g. 5 min)** — Faster alerting, but more sensitive to noise and one-off spikes.
+  - **Longer window (e.g. 30 min)** — More tolerant of transient spikes, but slower to detect sustained issues.
+- If you create alerts manually (Option D), use the values in the tables below, or adjust to match your operational requirements.
+
 ### Part 1 — Severity-Based Alerts
 
 These alerts fire based on the syslog `Severity` field value. VMware may log abbreviated (`emerg`, `crit`, `err`) or full-word (`emergency`, `critical`, `error`) forms — queries match both.
