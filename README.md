@@ -143,6 +143,12 @@ All alert rules use an **evaluation frequency of 5 minutes** with a **lookback w
 - It also smooths out short bursts — a single stray error won't immediately trigger threshold-based alerts (Error, DNS, DFW), but a sustained pattern within 15 minutes will.
 - The Heartbeat alert uses 30 minutes because brief ingestion delays (a few minutes) are normal; only a prolonged gap signals a real pipeline problem.
 
+**Why not a shorter window (e.g. 1 or 5 minutes)?**
+- AVS syslog data flows through multiple stages before it becomes queryable: AVS private cloud → Diagnostic Setting → Log Analytics ingestion pipeline → `AVSSyslog` table. This typically takes **2–5 minutes**, and can occasionally take longer.
+- A 1-minute window would scan a time range where the data hasn't arrived yet, causing **missed alerts**.
+- A 5-minute window works in ideal conditions but leaves no buffer for ingestion delays — if data takes 6 minutes to arrive, the event falls outside the window.
+- The 15-minute window is resilient to ingestion lag of up to 10 minutes, with no downside for `> 0` threshold alerts. **Detection speed is controlled by the 5-minute frequency, not the window** — the window only affects how far back each evaluation scans.
+
 **Should you adjust it?**
 - For most environments, the defaults work well. You can adjust them after deployment in **Monitor → Alerts → Alert rules → Edit**:
   - **Shorter window (e.g. 5 min)** — Faster alerting, but more sensitive to noise and one-off spikes.
