@@ -1,8 +1,6 @@
-# AVS Syslog Alerts
+# AVS Syslog Monitoring — Workbook & Alerts
 
-[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-alerts%2Fmain%2Favs-syslog-alerts-deploy-template.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-alerts%2Fmain%2FcreateUiDefinition.json)
-
-Pre-built Azure Monitor alert rules and an Azure Monitor Workbook for monitoring [Azure VMware Solution (AVS)](https://learn.microsoft.com/en-us/azure/azure-vmware/) syslog events. Covers **14 alert rules** across severity-based and event-specific scenarios, all deployed as Scheduled Query Rules against the `AVSSyslog` Log Analytics table.
+Pre-built Azure Monitor **Workbook** and **14 alert rules** for monitoring [Azure VMware Solution (AVS)](https://learn.microsoft.com/en-us/azure/azure-vmware/) syslog events. Everything runs against the `AVSSyslog` Log Analytics table.
 
 ---
 
@@ -12,11 +10,11 @@ Pre-built Azure Monitor alert rules and an Azure Monitor Workbook for monitoring
 |---|---|
 | **AVS private cloud** | With a [Diagnostic Setting](https://learn.microsoft.com/en-us/azure/azure-vmware/configure-vmware-syslogs) that sends the **Syslog** category to a Log Analytics workspace. |
 | **Log Analytics workspace** | The workspace that receives `AVSSyslog` data. |
-| **Action Group(s)** | At least one [Action Group](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/action-groups) (email, SMS, webhook, etc.) for alert notifications. You can use one group for all severities or separate groups per severity level. |
+| **Action Group(s)** | At least one [Action Group](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/action-groups) for alert notifications. Required only for alert deployment. |
 
 ### Configure AVS Syslog Forwarding
 
-Before deploying alerts, your AVS private cloud must be sending syslog data to a Log Analytics workspace. If you haven't done this yet:
+Before deploying, your AVS private cloud must be sending syslog data to a Log Analytics workspace:
 
 1. In the Azure portal, navigate to your **Azure VMware Solution** private cloud.
 2. Go to **Diagnostic settings** → **+ Add diagnostic setting**.
@@ -24,38 +22,79 @@ Before deploying alerts, your AVS private cloud must be sending syslog data to a
 4. Under **Destination details**, select **Send to Log Analytics workspace** and choose your workspace.
 5. Click **Save**.
 
-After a few minutes, the `AVSSyslog` table will begin receiving data. You can verify with:
+Verify data is flowing after a few minutes:
 
 ```kql
 AVSSyslog
 | take 10
 ```
 
-> For full configuration details, see [Configure VMware syslogs for Azure VMware Solution](https://learn.microsoft.com/en-us/azure/azure-vmware/configure-vmware-syslogs).
+> For full details, see [Configure VMware syslogs for Azure VMware Solution](https://learn.microsoft.com/en-us/azure/azure-vmware/configure-vmware-syslogs).
 
 ---
 
-## Quick Start
+## 1. Deploy the Workbook
+
+The workbook gives you real-time dashboards for severity distribution, event-specific monitoring, host health, and pipeline status — start here.
+
+### Option A — One-click Deploy
+
+[![Deploy Workbook to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-syslog-workbook-deploy-template.json)
+
+1. Click the button above.
+2. Select your **Subscription** and **Resource Group**.
+3. Pick your **Log Analytics workspace** from the dropdown.
+4. Optionally change the workbook display name (default: `AVS Syslog Monitoring`).
+5. Click **Review + create** → **Create**.
+
+### Option B — Manual Import (Azure Portal)
+
+1. Go to **Monitor → Workbooks → + New**.
+2. Click the **Advanced Editor** icon (`</>`).
+3. Delete any existing JSON in the editor.
+4. Paste the full contents of [`avs-syslog-workbook-gallery.json`](avs-syslog-workbook-gallery.json).
+5. Click **Apply**.
+6. Click **Save** (or **Save As**), choose your resource group and location.
+
+### Option C — Azure CLI
+
+```bash
+# Deploy the workbook ARM template
+az deployment group create \
+  --resource-group <your-rg> \
+  --template-file avs-syslog-workbook-deploy-template.json \
+  --parameters workbookSourceId="<workspace-resource-id>"
+```
+
+### Workbook Sections
+
+Once deployed, the workbook includes:
+
+| Section | What It Shows |
+|---|---|
+| **Overview** | Severity distribution tiles, pie chart, top event sources by AppName |
+| **Part 1 — Severity-Based** | Time series and detail grids for Emergency, Alert, Critical, Error events |
+| **Part 2 — Event-Specific** | Summary tiles and grids for host failures, VM changes, DNS, DFW, maintenance, role changes |
+| **Host Health Overview** | Per-host heatmap and trend of high-impact events |
+| **Data Pipeline Health** | Syslog ingestion heartbeat tile and volume chart |
+
+---
+
+## 2. Deploy the Alert Rules
 
 ### Option A — One-click Deploy (recommended)
 
-1. Click the **Deploy to Azure** button above.
-2. A guided wizard walks you through four steps:
-   - **Basics** — Select your subscription, resource group, and Log Analytics workspace from a dropdown picker.
-   - **Action Groups** — Pick existing action groups for Severity 0, 1, and 2 alerts.
+[![Deploy Alerts to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-syslog-alerts-deploy-template.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2FcreateUiDefinition.json)
+
+1. Click the button above.
+2. A guided wizard walks you through:
+   - **Basics** — Subscription, resource group, Log Analytics workspace.
+   - **Action Groups** — Pick existing action groups for Severity 0, 1, and 2.
    - **Select Alerts** — Check or uncheck each of the 14 alert rules.
-   - **Thresholds** — Use sliders to set thresholds for volume-based alerts (Error, DNS, DFW).
+   - **Thresholds** — Sliders for volume-based alerts (Error, DNS, DFW).
 3. Click **Review + create** → **Create**.
 
-### Option B — Import the Workbook first
-
-1. In the Azure portal, go to **Monitor → Workbooks → + New**.
-2. Open the **Advanced Editor** (`</>` icon).
-3. Paste the contents of [`avs-syslog-workbook-gallery.json`](avs-syslog-workbook-gallery.json) and click **Apply**.
-4. Save the workbook to your resource group.
-5. Use the **Deploy AVS Syslog Alerts** button inside the workbook to launch the same deployment wizard.
-
-### Option C — Azure CLI
+### Option B — Azure CLI (all alerts at once)
 
 ```bash
 az deployment group create \
@@ -67,27 +106,19 @@ az deployment group create \
                actionGroupIdSev2="<action-group-resource-id>"
 ```
 
----
+### Option C — Manual Alert Creation (Azure Portal)
 
-## What's Included
+Create individual alert rules from **Monitor → Alerts → + Create → Alert rule**:
 
-### Repository Files
+1. **Scope** — Select your Log Analytics workspace.
+2. **Condition** — Choose **Custom log search**, paste the KQL query from the table below.
+3. **Measurement** — Aggregation type: **Count**, Threshold: as noted.
+4. **Evaluation** — Check every **5 minutes**, lookback period **15 minutes** (30 min for Heartbeat).
+5. **Actions** — Attach your Action Group.
+6. **Details** — Set the name, severity, and description.
+7. **Review + create**.
 
-| File | Description |
-|---|---|
-| `avs-syslog-alerts-deploy-template.json` | ARM template with 14 Scheduled Query Rules and per-alert boolean toggles. |
-| `createUiDefinition.json` | Custom portal UI definition that provides resource pickers and a guided wizard. |
-| `avs-syslog-workbook-gallery.json` | Azure Monitor Workbook with dashboards for all severity levels, event types, host health, and pipeline status. |
-
-### Workbook Sections
-
-The workbook provides real-time visibility into your AVS syslog data:
-
-- **Overview** — Severity distribution tiles and pie chart, top event sources by AppName.
-- **Part 1 — Severity-Based Monitoring** — Time series and detail grids for Emergency, Alert, Critical, and Error events.
-- **Part 2 — Event-Specific Monitoring** — Summary tiles and detail grids for host failures, VM changes, DNS, DFW, maintenance, and role changes.
-- **Host Health Overview** — Per-host heatmap and trend of high-impact events.
-- **Data Pipeline Health** — Syslog ingestion heartbeat tile and volume chart.
+Repeat for each alert you want. The full KQL queries are listed below.
 
 ---
 
@@ -95,43 +126,240 @@ The workbook provides real-time visibility into your AVS syslog data:
 
 ### Part 1 — Severity-Based Alerts
 
-These alerts fire based on the syslog `Severity` field value. VMware systems may log both abbreviated and full-word severity forms, so queries match both (e.g., `emerg` and `emergency`).
+These alerts fire based on the syslog `Severity` field value. VMware may log abbreviated (`emerg`, `crit`, `err`) or full-word (`emergency`, `critical`, `error`) forms — queries match both.
 
-| Alert Name | Severity | KQL Match | Threshold | Window | Default |
-|---|:---:|---|:---:|:---:|:---:|
-| **Sev0-Emergency** | 0 | `Severity in ("emerg", "emergency")` | > 0 | 15 min | ✅ On |
-| **Sev0-Alert** | 0 | `Severity == "alert"` | > 0 | 15 min | ✅ On |
-| **Sev1-Critical** | 1 | `Severity in ("crit", "critical")` | > 0 | 15 min | ✅ On |
-| **Sev2-Error** | 2 | `Severity in ("err", "error")` | > configurable* | 15 min | ❌ Off |
+#### Sev0-Emergency
 
-> \* **Sev2-Error** is disabled by default because `err`/`error` events can be high-volume. Enable it only after establishing a baseline. The threshold is configurable (default: **5** per HostName + AppName per 15-minute window).
+| Property | Value |
+|---|---|
+| **Azure Severity** | 0 |
+| **Threshold** | > 0 (any occurrence) |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where Severity in ("emerg", "emergency")
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### Sev0-Alert
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 0 |
+| **Threshold** | > 0 |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where Severity == "alert"
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### Sev1-Critical
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 1 |
+| **Threshold** | > 0 |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where Severity in ("crit", "critical")
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### Sev2-Error (optional — can be noisy)
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 2 |
+| **Threshold** | > 5 per HostName + AppName (configurable) |
+| **Window** | 15 min |
+| **Default** | ❌ Disabled |
+
+```kql
+AVSSyslog
+| where Severity in ("err", "error")
+| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, 15m)
+| where ErrorCount > 5
+```
+
+> **Tip:** Adjust the `ErrorCount > 5` threshold to match your environment baseline. This alert is disabled by default to avoid noise.
+
+---
 
 ### Part 2 — Event-Specific Alerts
 
-These alerts fire on specific VMware events detected in the `Message` field, regardless of severity level.
+#### Host-ConnectionLost
 
-| Alert Name | Severity | KQL Match | Threshold | Window | Default |
-|---|:---:|---|:---:|:---:|:---:|
-| **Host-ConnectionLost** | 0 | `Message has "lost connection to the host"` | > 0 | 15 min | ✅ On |
-| **Host-Shutdown** | 0 | `Message has "hostshutdownevent"` | > 0 | 15 min | ✅ On |
-| **VM-Disconnected** | 1 | `Message has "vmdisconnectedevent"` | > 0 | 15 min | ✅ On |
-| **VM-RemovedFromInventory** | 1 | `Message has "vmremovedevent"` | > 0 | 15 min | ✅ On |
-| **VM-GuestReboot** | 2 | `Message has "VmGuestRebootEvent"` | > 0 | 15 min | ✅ On |
-| **DNS-Failures** | 1 | `AppName == "dnsmasq"` and `Message has "Failed DNS Query"` | > configurable* | 15 min | ✅ On |
-| **NSX-DFW-BlockedSpike** | 2 | `AppName == "FIREWALL"` or `ProcId == "FIREWALL"` with `DROP/REJECT/denied` | > configurable* | 15 min | ✅ On |
-| **Host-MaintenanceMode** | 2 | `Message has_any ("entered maintenance mode", "exited maintenance mode")` | > 0 | 15 min | ✅ On |
-| **Security-RoleChange** | 1 | `Message has "RoleAddedEvent"` | > 0 | 15 min | ✅ On |
-| **Syslog-IngestionHeartbeat** | 0 | `AVSSyslog \| where TimeGenerated > ago(30m) \| summarize Count = count()` | == 0 | 30 min | ✅ On |
+| Property | Value |
+|---|---|
+| **Azure Severity** | 0 |
+| **Threshold** | > 0 |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
 
-> **Configurable thresholds:**
-> - DNS Failures — default **10** per host per 15 min
-> - DFW Blocked Spike — default **50** per host per 15 min
+```kql
+AVSSyslog
+| where Message has "lost connection to the host"
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### Host-Shutdown
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 0 |
+| **Threshold** | > 0 |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where Message has "hostshutdownevent"
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### VM-Disconnected
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 1 |
+| **Threshold** | > 0 |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where Message has "vmdisconnectedevent"
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### VM-RemovedFromInventory
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 1 |
+| **Threshold** | > 0 |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where Message has "vmremovedevent"
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### VM-GuestReboot
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 2 |
+| **Threshold** | > 0 |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where Message has "VmGuestRebootEvent"
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### DNS-Failures
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 1 |
+| **Threshold** | > 10 per host (configurable) |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where AppName == "dnsmasq"
+| where Message has "Failed DNS Query"
+| summarize FailureCount = count() by HostName, bin(TimeGenerated, 15m)
+| where FailureCount > 10
+```
+
+> Adjust `FailureCount > 10` to your baseline.
+
+#### NSX-DFW-BlockedSpike
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 2 |
+| **Threshold** | > 50 per host (configurable) |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where AppName == "FIREWALL" or ProcId == "FIREWALL"
+| where Message has_any ("DROP", "REJECT", "denied")
+| summarize BlockedCount = count() by HostName, bin(TimeGenerated, 15m)
+| where BlockedCount > 50
+```
+
+> Adjust `BlockedCount > 50` to your baseline.
+
+#### Host-MaintenanceMode
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 2 |
+| **Threshold** | > 0 |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where Message has_any ("The host has entered maintenance mode", "The host has exited maintenance mode")
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### Security-RoleChange
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 1 |
+| **Threshold** | > 0 |
+| **Window** | 15 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where Message has "RoleAddedEvent"
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
+
+#### Syslog-IngestionHeartbeat
+
+| Property | Value |
+|---|---|
+| **Azure Severity** | 0 |
+| **Threshold** | == 0 (fires when **no** data arrives) |
+| **Window** | 30 min |
+| **Default** | ✅ Enabled |
+
+```kql
+AVSSyslog
+| where TimeGenerated > ago(30m)
+| summarize Count = count()
+```
+
+> This alert fires when the count equals zero — meaning no syslog data has been ingested in 30 minutes. Set the condition to `Equal` → `0`.
 
 ---
 
 ## Action Group Routing
 
-Alerts are grouped into three severity tiers. You can assign a different action group to each tier, or use the same group for all.
+Alerts are grouped into three severity tiers. Assign a different action group per tier, or use the same group for all.
 
 | Tier | Azure Severity | Alerts Routed |
 |---|:---:|---|
@@ -143,13 +371,9 @@ Alerts are grouped into three severity tiers. You can assign a different action 
 
 ## Alert Naming Convention
 
-All alert rule names follow the pattern:
+All alert rule names follow: `{Prefix}-{Category}-{Name}`
 
-```
-{Prefix}-{Category}-{Name}
-```
-
-With the default prefix `AVS`, deployed rule names look like:
+With the default prefix `AVS`:
 
 | Category | Examples |
 |---|---|
@@ -161,32 +385,43 @@ With the default prefix `AVS`, deployed rule names look like:
 
 ---
 
-## Deployment Parameters
+## Repository Files
+
+| File | Description |
+|---|---|
+| `avs-syslog-workbook-deploy-template.json` | ARM template to deploy the workbook as an Azure resource. |
+| `avs-syslog-workbook-gallery.json` | Raw workbook JSON for manual import via the Advanced Editor. |
+| `avs-syslog-alerts-deploy-template.json` | ARM template with 14 Scheduled Query Rules and per-alert boolean toggles. |
+| `createUiDefinition.json` | Custom portal UI for the alert deployment wizard (resource pickers, sliders). |
+
+---
+
+## Deployment Parameters — Alert Template
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
-| `workspaceResourceId` | string | *(required)* | Resource ID of the Log Analytics workspace receiving AVSSyslog. |
+| `workspaceResourceId` | string | *(required)* | Log Analytics workspace receiving AVSSyslog. |
 | `alertNamePrefix` | string | `AVS` | Prefix for all alert rule names. |
 | `actionGroupIdSev0` | string | `""` | Action group for Severity 0 alerts. |
 | `actionGroupIdSev1` | string | `""` | Action group for Severity 1 alerts. |
 | `actionGroupIdSev2` | string | `""` | Action group for Severity 2 alerts. |
-| `errThresholdPer15m` | int | `5` | Error event threshold per HostName + AppName per 15 min. |
+| `errThresholdPer15m` | int | `5` | Error threshold per HostName + AppName per 15 min. |
 | `dnsFailureThresholdPer15m` | int | `10` | DNS failure threshold per host per 15 min. |
 | `dfwSpikeThresholdPer15m` | int | `50` | DFW blocked traffic threshold per host per 15 min. |
-| `deploySev0Emergency` | bool | `true` | Deploy the Emergency alert rule. |
-| `deploySev0Alert` | bool | `true` | Deploy the Alert-severity alert rule. |
-| `deploySev1Critical` | bool | `true` | Deploy the Critical alert rule. |
-| `deploySev2Error` | bool | `false` | Deploy the Error alert rule (noisy — establish baseline first). |
-| `deployHostConnectionLost` | bool | `true` | Deploy the Host Connection Lost alert. |
-| `deployHostShutdown` | bool | `true` | Deploy the Host Shutdown alert. |
-| `deployVmDisconnected` | bool | `true` | Deploy the VM Disconnected alert. |
-| `deployVmRemovedFromInventory` | bool | `true` | Deploy the VM Removed from Inventory alert. |
-| `deployVmGuestReboot` | bool | `true` | Deploy the VM Guest Reboot alert. |
-| `deployDnsFailures` | bool | `true` | Deploy the DNS Failures alert. |
-| `deployDfwSpike` | bool | `true` | Deploy the DFW Blocked Spike alert. |
-| `deployHostMaintenanceMode` | bool | `true` | Deploy the Host Maintenance Mode alert. |
-| `deployRolePermissionChanges` | bool | `true` | Deploy the Role/Permission Changes alert. |
-| `deploySyslogIngestionHeartbeat` | bool | `true` | Deploy the Syslog Ingestion Heartbeat alert. |
+| `deploySev0Emergency` | bool | `true` | Deploy the Emergency alert. |
+| `deploySev0Alert` | bool | `true` | Deploy the Alert-severity alert. |
+| `deploySev1Critical` | bool | `true` | Deploy the Critical alert. |
+| `deploySev2Error` | bool | `false` | Deploy the Error alert (noisy — baseline first). |
+| `deployHostConnectionLost` | bool | `true` | Host Connection Lost alert. |
+| `deployHostShutdown` | bool | `true` | Host Shutdown alert. |
+| `deployVmDisconnected` | bool | `true` | VM Disconnected alert. |
+| `deployVmRemovedFromInventory` | bool | `true` | VM Removed from Inventory alert. |
+| `deployVmGuestReboot` | bool | `true` | VM Guest Reboot alert. |
+| `deployDnsFailures` | bool | `true` | DNS Failures alert. |
+| `deployDfwSpike` | bool | `true` | DFW Blocked Spike alert. |
+| `deployHostMaintenanceMode` | bool | `true` | Host Maintenance Mode alert. |
+| `deployRolePermissionChanges` | bool | `true` | Role/Permission Changes alert. |
+| `deploySyslogIngestionHeartbeat` | bool | `true` | Syslog Ingestion Heartbeat alert. |
 
 ---
 
@@ -203,13 +438,13 @@ With the default prefix `AVS`, deployed rule names look like:
 | 6 | `info` | Informational messages |
 | 7 | `debug` | Debug-level messages |
 
-> **Note:** VMware systems may log both abbreviated (`emerg`, `crit`, `err`) and full-word (`emergency`, `critical`, `error`) severity forms. All queries in this solution match both forms to prevent missed events.
+> **Note:** VMware systems may log both abbreviated and full-word severity forms. All queries in this solution match both to prevent missed events.
 
 ---
 
 ## Exploration Queries
 
-Run these in your Log Analytics workspace to validate syslog data before enabling alerts.
+Run these in your Log Analytics workspace to validate data before enabling alerts.
 
 **Check if AVSSyslog table has data:**
 ```kql
@@ -217,7 +452,7 @@ AVSSyslog
 | take 10
 ```
 
-**Severity distribution over the last 24 hours:**
+**Severity distribution (last 24h):**
 ```kql
 AVSSyslog
 | where TimeGenerated > ago(24h)

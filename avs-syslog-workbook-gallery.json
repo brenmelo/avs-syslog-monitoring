@@ -104,7 +104,7 @@
     {
       "type": 1,
       "content": {
-        "json": "## Deploy AVS Syslog Alerts\n\n[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-alerts%2Fmain%2Favs-syslog-alerts-deploy-template.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-alerts%2Fmain%2FcreateUiDefinition.json)\n\nClick the button above to launch a guided wizard that lets you pick your workspace, action groups, and which alerts to deploy.\n\n---"
+        "json": "## Deploy AVS Syslog Alerts\n\n[![Deploy to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-syslog-alerts-deploy-template.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2FcreateUiDefinition.json)\n\nClick the button above to launch a guided wizard that lets you pick your workspace, action groups, and which alerts to deploy.\n\n---"
       },
       "name": "section-deploy-alerts"
     },

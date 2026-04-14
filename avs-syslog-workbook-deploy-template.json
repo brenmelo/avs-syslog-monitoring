@@ -1,0 +1,613 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "workbookDisplayName": {
+      "type": "string",
+      "defaultValue": "AVS Syslog Monitoring",
+      "metadata": {
+        "description": "The display name of the workbook."
+      }
+    },
+    "workbookSourceId": {
+      "type": "string",
+      "metadata": {
+        "description": "The full resource ID of the Log Analytics workspace (e.g. /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.OperationalInsights/workspaces/{name}).",
+        "strongType": "Microsoft.OperationalInsights/workspaces"
+      }
+    }
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Insights/workbooks",
+      "apiVersion": "2023-06-01",
+      "name": "[variables('workbookId')]",
+      "location": "[resourceGroup().location]",
+      "kind": "shared",
+      "properties": {
+        "displayName": "[parameters('workbookDisplayName')]",
+        "serializedData": "[string(variables('workbookContent'))]",
+        "version": "Notebook/1.0",
+        "sourceId": "[parameters('workbookSourceId')]",
+        "category": "workbook"
+      }
+    }
+  ],
+  "variables": {
+    "workbookId": "[guid(parameters('workbookDisplayName'), parameters('workbookSourceId'))]",
+    "workbookContent": {
+      "version": "Notebook/1.0",
+      "items": [
+        {
+          "type": 1,
+          "content": {
+            "json": "# AVS Syslog Monitoring Dashboard\n\nThis workbook provides visibility into VMware syslog events flowing into the **AVSSyslog** table from your Azure VMware Solution (AVS) private cloud. It is organized into the same two-part structure as the alerting strategy:\n\n- **Part 1** — Severity-based monitoring (Emergency, Alert, Critical, Error)\n- **Part 2** — Event-specific monitoring (host failures, VM changes, DNS, firewall, etc.)\n\n---"
+          },
+          "name": "header"
+        },
+        {
+          "type": 9,
+          "content": {
+            "version": "KqlParameterItem/1.0",
+            "parameters": [
+              {
+                "id": "timeRange",
+                "version": "KqlParameterItem/1.0",
+                "name": "TimeRange",
+                "type": 4,
+                "isRequired": true,
+                "typeSettings": {
+                  "selectableValues": [
+                    { "durationMs": 3600000 },
+                    { "durationMs": 14400000 },
+                    { "durationMs": 43200000 },
+                    { "durationMs": 86400000 },
+                    { "durationMs": 259200000 },
+                    { "durationMs": 604800000 },
+                    { "durationMs": 2592000000 }
+                  ],
+                  "allowCustom": true
+                },
+                "value": {
+                  "durationMs": 86400000
+                },
+                "label": "Time Range"
+              },
+              {
+                "id": "hostFilter",
+                "version": "KqlParameterItem/1.0",
+                "name": "HostFilter",
+                "type": 2,
+                "isRequired": false,
+                "multiSelect": true,
+                "quote": "'",
+                "delimiter": ",",
+                "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| distinct HostName\n| order by HostName asc",
+                "typeSettings": {
+                  "additionalResourceOptions": ["value::all"],
+                  "showDefault": false
+                },
+                "defaultValue": "value::all",
+                "queryType": 0,
+                "label": "Host"
+              },
+              {
+                "id": "severityFilter",
+                "version": "KqlParameterItem/1.0",
+                "name": "SeverityFilter",
+                "type": 2,
+                "isRequired": false,
+                "multiSelect": true,
+                "quote": "'",
+                "delimiter": ",",
+                "jsonData": "[\"emerg\",\"alert\",\"crit\",\"err\",\"warning\",\"notice\",\"info\",\"debug\"]",
+                "typeSettings": {
+                  "additionalResourceOptions": ["value::all"],
+                  "showDefault": false
+                },
+                "defaultValue": "value::all",
+                "label": "Severity"
+              }
+            ],
+            "style": "pills",
+            "queryType": 0
+          },
+          "name": "parameters"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "---\n## Overview — Severity Distribution"
+          },
+          "name": "section-overview"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Severity in (\"emerg\", \"alert\", \"crit\", \"err\")\n| summarize Count = count() by Severity\n| order by case(\n    Severity == \"emerg\", 0,\n    Severity == \"alert\", 1,\n    Severity == \"crit\", 2,\n    Severity == \"err\", 3,\n    99\n  ) asc",
+            "size": 3,
+            "title": "High-Impact Events by Severity (0–3 only)",
+            "queryType": 0,
+            "visualization": "tiles",
+            "tileSettings": {
+              "titleContent": {
+                "columnMatch": "Severity",
+                "formatter": 1
+              },
+              "leftContent": {
+                "columnMatch": "Count",
+                "formatter": 12,
+                "formatOptions": {
+                  "palette": "redGreen",
+                  "compositeBarSettings": {
+                    "labelText": "",
+                    "columnSettings": []
+                  }
+                },
+                "numberFormat": {
+                  "unit": 0,
+                  "options": { "style": "decimal", "maximumFractionDigits": 0 }
+                }
+              },
+              "showBorder": true,
+              "size": "auto"
+            }
+          },
+          "name": "Severity-tiles"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| summarize Count = count() by Severity\n| order by case(\n    Severity == \"emerg\", 0,\n    Severity == \"alert\", 1,\n    Severity == \"crit\", 2,\n    Severity == \"err\", 3,\n    Severity == \"warning\", 4,\n    Severity == \"notice\", 5,\n    Severity == \"info\", 6,\n    Severity == \"debug\", 7,\n    99\n  ) asc",
+            "size": 1,
+            "title": "Full Severity Distribution (all levels)",
+            "queryType": 0,
+            "visualization": "piechart",
+            "chartSettings": {
+              "seriesLabelSettings": [
+                { "seriesName": "emerg", "color": "redDark" },
+                { "seriesName": "alert", "color": "red" },
+                { "seriesName": "crit", "color": "orange" },
+                { "seriesName": "err", "color": "yellow" },
+                { "seriesName": "warning", "color": "yellowDark" },
+                { "seriesName": "notice", "color": "blue" },
+                { "seriesName": "info", "color": "green" },
+                { "seriesName": "debug", "color": "gray" }
+              ]
+            }
+          },
+          "customWidth": "50",
+          "name": "Severity-pie"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| summarize Count = count() by AppName\n| top 15 by Count desc",
+            "size": 1,
+            "title": "Top Event Sources (AppName)",
+            "queryType": 0,
+            "visualization": "barchart",
+            "chartSettings": {
+              "xAxis": "AppName",
+              "yAxis": ["Count"]
+            }
+          },
+          "customWidth": "50",
+          "name": "top-sources-bar"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "---\n## Part 1 — Severity-Based Monitoring (emerg / alert / crit / err)"
+          },
+          "name": "section-part1"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Severity in (\"emerg\", \"alert\", \"crit\", \"err\")\n| summarize Count = count() by Severity, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
+            "size": 0,
+            "title": "Severity 0–3 Events Over Time",
+            "queryType": 0,
+            "visualization": "areachart",
+            "chartSettings": {
+              "seriesLabelSettings": [
+                { "seriesName": "emerg", "color": "redDark" },
+                { "seriesName": "alert", "color": "red" },
+                { "seriesName": "crit", "color": "orange" },
+                { "seriesName": "err", "color": "yellow" }
+              ],
+              "ySettings": {
+                "min": 0
+              }
+            }
+          },
+          "name": "Severity-trend"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Severity == \"emerg\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+            "size": 1,
+            "title": "🔴 Emergency Events (Severity 0 — emerg)",
+            "queryType": 0,
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Severity",
+                  "formatter": 18,
+                  "formatOptions": {
+                    "thresholdsOptions": "colors",
+                    "thresholdsGrid": [
+                      { "operator": "==", "thresholdValue": "emerg", "representation": "redDark", "text": "{0}" }
+                    ]
+                  }
+                }
+              ]
+            },
+            "showExportToExcel": true
+          },
+          "name": "emerg-grid"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Severity == \"alert\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+            "size": 1,
+            "title": "🔴 Alert Events (Severity 1 — alert)",
+            "queryType": 0,
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Severity",
+                  "formatter": 18,
+                  "formatOptions": {
+                    "thresholdsOptions": "colors",
+                    "thresholdsGrid": [
+                      { "operator": "==", "thresholdValue": "alert", "representation": "red", "text": "{0}" }
+                    ]
+                  }
+                }
+              ]
+            },
+            "showExportToExcel": true
+          },
+          "name": "alert-grid"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Severity == \"crit\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+            "size": 1,
+            "title": "🟠 Critical Events (Severity 2 — crit)",
+            "queryType": 0,
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Severity",
+                  "formatter": 18,
+                  "formatOptions": {
+                    "thresholdsOptions": "colors",
+                    "thresholdsGrid": [
+                      { "operator": "==", "thresholdValue": "crit", "representation": "orange", "text": "{0}" }
+                    ]
+                  }
+                }
+              ]
+            },
+            "showExportToExcel": true
+          },
+          "name": "crit-grid"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Severity == \"err\"\n| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated desc",
+            "size": 0,
+            "title": "🟡 Error Events Over Time by Host + App (Severity 3 — err)",
+            "queryType": 0,
+            "visualization": "areachart"
+          },
+          "name": "err-trend"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Severity == \"err\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 200",
+            "size": 1,
+            "title": "🟡 Error Events Detail (Severity 3 — err)",
+            "queryType": 0,
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "Severity",
+                  "formatter": 18,
+                  "formatOptions": {
+                    "thresholdsOptions": "colors",
+                    "thresholdsGrid": [
+                      { "operator": "==", "thresholdValue": "err", "representation": "yellow", "text": "{0}" }
+                    ]
+                  }
+                }
+              ]
+            },
+            "showExportToExcel": true
+          },
+          "name": "err-grid"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "---\n## Part 2 — Event-Specific Monitoring"
+          },
+          "name": "section-part2"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "let hostLost = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has \"lost connection to the host\"\n| summarize Count = count()\n| extend Event = \"Host Connection Lost\";\nlet hostShutdown = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has \"hostshutdownevent\"\n| summarize Count = count()\n| extend Event = \"Host Shutdown\";\nlet vmDisconnected = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has \"vmdisconnectedevent\"\n| summarize Count = count()\n| extend Event = \"VM Disconnected\";\nlet vmDeleted = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has \"vmremovedevent\"\n| summarize Count = count()\n| extend Event = \"VM Deleted\";\nlet vmReboot = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has \"VmGuestRebootEvent\"\n| summarize Count = count()\n| extend Event = \"VM Guest Reboot\";\nlet dnsFailures = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where AppName == \"dnsmasq\" and Message has \"Failed DNS Query\"\n| summarize Count = count()\n| extend Event = \"DNS Failures\";\nlet fwBlocked = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where (AppName == \"FIREWALL\" or ProcId == \"FIREWALL\") and Message has_any (\"DROP\", \"REJECT\", \"denied\")\n| summarize Count = count()\n| extend Event = \"Firewall Blocked\";\nlet maintenance = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| summarize Count = count()\n| extend Event = \"Host Maintenance Mode\";\nlet roleChange = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has \"RoleAddedEvent\"\n| summarize Count = count()\n| extend Event = \"Role Changes\";\nunion hostLost, hostShutdown, vmDisconnected, vmDeleted, vmReboot, dnsFailures, fwBlocked, maintenance, roleChange\n| project Event, Count\n| order by Count desc",
+            "size": 3,
+            "title": "Event-Specific Summary",
+            "queryType": 0,
+            "visualization": "tiles",
+            "tileSettings": {
+              "titleContent": {
+                "columnMatch": "Event",
+                "formatter": 1
+              },
+              "leftContent": {
+                "columnMatch": "Count",
+                "formatter": 12,
+                "formatOptions": {
+                  "palette": "redGreen"
+                },
+                "numberFormat": {
+                  "unit": 0,
+                  "options": { "style": "decimal", "maximumFractionDigits": 0 }
+                }
+              },
+              "showBorder": true,
+              "size": "auto"
+            }
+          },
+          "name": "event-summary-tiles"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has_any (\"lost connection to the host\", \"hostshutdownevent\", \"hostaddedevent\", \"hostconnectedevent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+            "size": 1,
+            "title": "Host Events (connection lost, shutdown, added, connected)",
+            "queryType": 0,
+            "visualization": "table",
+            "showExportToExcel": true
+          },
+          "name": "host-events-grid"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has_any (\"vmdisconnectedevent\", \"vmremovedevent\", \"VmGuestRebootEvent\", \"VmPowerStateChangedEvent\", \"vmcreatedevent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+            "size": 1,
+            "title": "VM Events (disconnected, deleted, rebooted, power change, created)",
+            "queryType": 0,
+            "visualization": "table",
+            "showExportToExcel": true
+          },
+          "name": "vm-events-grid"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where AppName == \"dnsmasq\" and Message has \"Failed DNS Query\"\n| summarize FailureCount = count() by HostName, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
+            "size": 0,
+            "title": "DNS Failures Over Time",
+            "queryType": 0,
+            "visualization": "linechart",
+            "chartSettings": {
+              "ySettings": { "min": 0 }
+            }
+          },
+          "customWidth": "50",
+          "name": "dns-failures-trend"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where AppName == \"FIREWALL\" or ProcId == \"FIREWALL\"\n| where Message has_any (\"DROP\", \"REJECT\", \"denied\")\n| summarize BlockedCount = count() by HostName, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
+            "size": 0,
+            "title": "Distributed Firewall Blocked Traffic Over Time",
+            "queryType": 0,
+            "visualization": "linechart",
+            "chartSettings": {
+              "ySettings": { "min": 0 }
+            }
+          },
+          "customWidth": "50",
+          "name": "dfw-blocked-trend"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 50",
+            "size": 1,
+            "title": "Host Maintenance Mode Changes",
+            "queryType": 0,
+            "visualization": "table",
+            "showExportToExcel": true
+          },
+          "customWidth": "50",
+          "name": "maintenance-grid"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Message has \"RoleAddedEvent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 50",
+            "size": 1,
+            "title": "Role / Permission Changes (Security Audit)",
+            "queryType": 0,
+            "visualization": "table",
+            "showExportToExcel": true
+          },
+          "customWidth": "50",
+          "name": "role-changes-grid"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "---\n## Host Health Overview"
+          },
+          "name": "section-host-health"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Severity in (\"emerg\", \"alert\", \"crit\", \"err\")\n| summarize\n    emerg = countif(Severity == \"emerg\"),\n    alert = countif(Severity == \"alert\"),\n    crit = countif(Severity == \"crit\"),\n    err = countif(Severity == \"err\"),\n    Total = count()\n  by HostName\n| order by Total desc",
+            "size": 1,
+            "title": "High-Impact Events per Host (Severity 0–3)",
+            "queryType": 0,
+            "visualization": "table",
+            "gridSettings": {
+              "formatters": [
+                {
+                  "columnMatch": "emerg",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "palette": "redDark"
+                  }
+                },
+                {
+                  "columnMatch": "alert",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "palette": "red"
+                  }
+                },
+                {
+                  "columnMatch": "crit",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "palette": "orange"
+                  }
+                },
+                {
+                  "columnMatch": "err",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "palette": "yellow"
+                  }
+                },
+                {
+                  "columnMatch": "Total",
+                  "formatter": 8,
+                  "formatOptions": {
+                    "palette": "blue"
+                  }
+                }
+              ]
+            },
+            "showExportToExcel": true
+          },
+          "name": "host-Severity-heatmap"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '{HostFilter}' == 'value::all' or HostName in ({HostFilter})\n| where Severity in (\"emerg\", \"alert\", \"crit\", \"err\")\n| summarize Count = count() by HostName, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
+            "size": 0,
+            "title": "High-Impact Events per Host Over Time",
+            "queryType": 0,
+            "visualization": "linechart",
+            "chartSettings": {
+              "ySettings": { "min": 0 }
+            }
+          },
+          "name": "host-Severity-trend"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "---\n## Data Pipeline Health"
+          },
+          "name": "section-pipeline"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| summarize LastEvent = max(TimeGenerated)\n| extend MinutesSinceLastEvent = datetime_diff('minute', now(), LastEvent)\n| extend Status = iff(MinutesSinceLastEvent > 30, '🔴 NO DATA — Pipeline may be down', iff(MinutesSinceLastEvent > 15, '🟡 DELAYED — Check pipeline', '🟢 HEALTHY'))\n| project Status, LastEvent, MinutesSinceLastEvent",
+            "size": 3,
+            "title": "Syslog Ingestion Heartbeat",
+            "queryType": 0,
+            "visualization": "tiles",
+            "tileSettings": {
+              "titleContent": {
+                "columnMatch": "Status",
+                "formatter": 1
+              },
+              "subtitleContent": {
+                "columnMatch": "MinutesSinceLastEvent",
+                "formatter": 1,
+                "formatOptions": {
+                  "postTextValue": " minutes since last event"
+                }
+              },
+              "showBorder": true,
+              "size": "full"
+            }
+          },
+          "name": "heartbeat-tile"
+        },
+        {
+          "type": 3,
+          "content": {
+            "version": "KqlItem/1.0",
+            "query": "AVSSyslog\n| where TimeGenerated {TimeRange}\n| summarize EventCount = count() by bin(TimeGenerated, 5m)\n| order by TimeGenerated asc",
+            "size": 0,
+            "title": "Syslog Ingestion Volume (events per 5 minutes)",
+            "queryType": 0,
+            "visualization": "areachart",
+            "chartSettings": {
+              "seriesLabelSettings": [
+                { "seriesName": "EventCount", "color": "blue" }
+              ],
+              "ySettings": { "min": 0 }
+            }
+          },
+          "name": "ingestion-volume"
+        },
+        {
+          "type": 1,
+          "content": {
+            "json": "---\n*Workbook source: [Microsoft — Queries for the AVSSyslog table](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/queries/avssyslog) | [AVSSyslog table schema](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/avssyslog)*"
+          },
+          "name": "footer"
+        }
+      ],
+      "fallbackResourceIds": [],
+      "fromTemplateId": "sentinel-UserWorkbook"
+    }
+  }
+}
