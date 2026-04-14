@@ -43,9 +43,9 @@ The workbook gives you real-time dashboards for severity distribution, event-spe
 
 1. Click the button above.
 2. Select your **Subscription** and **Resource Group**.
-3. Pick your **Log Analytics workspace** from the dropdown.
-4. Optionally change the workbook display name (default: `AVS Syslog Monitoring`).
-5. Click **Review + create** → **Create**.
+3. Optionally change the workbook display name (default: `AVS Syslog Monitoring`).
+4. Click **Review + create** → **Create**.
+5. Open the workbook and select your **Log Analytics workspace** from the dropdown inside.
 
 ### Option B — Manual Import (Azure Portal)
 
@@ -62,8 +62,7 @@ The workbook gives you real-time dashboards for severity distribution, event-spe
 # Deploy the workbook ARM template
 az deployment group create \
   --resource-group <your-rg> \
-  --template-file avs-syslog-workbook-deploy-template.json \
-  --parameters workbookSourceId="<workspace-resource-id>"
+  --template-file avs-syslog-workbook-deploy-template.json
 ```
 
 ### Workbook Sections
