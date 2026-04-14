@@ -18,7 +18,7 @@ Before deploying, your AVS private cloud must be sending syslog data to a Log An
 
 1. In the Azure portal, navigate to your **Azure VMware Solution** private cloud.
 2. Go to **Diagnostic settings** → **+ Add diagnostic setting**.
-3. Check the **Syslog** category.
+3. Check the **vmwaresyslog** category (this includes vCenter, ESXi, vSAN, NSX, and firewall logs).
 4. Under **Destination details**, select **Send to Log Analytics workspace** and choose your workspace.
 5. Click **Save**.
 
@@ -165,12 +165,12 @@ Syslog uses eight standard severity levels defined in [RFC 5424](https://datatra
 | **1** | `alert` | Immediate action required | **Alert immediately** — any occurrence |
 | **2** | `crit` / `critical` | Critical condition (e.g. hardware failure) | **Alert immediately** — any occurrence |
 | **3** | `err` / `error` | Error condition | **Optional** — threshold-based (can be noisy) |
-| 4 | `warning` | Warning — may indicate a developing issue | Monitor in workbook (no alert by default) |
+| 4 | `warn` / `warning` | Warning — may indicate a developing issue | Monitor in workbook (no alert by default) |
 | 5 | `notice` | Normal but noteworthy | Monitor in workbook |
 | 6 | `info` | Informational | Monitor in workbook |
 | 7 | `debug` | Debug-level detail | Monitor in workbook |
 
-> **Important — Dual Severity Forms:** VMware systems may log both the abbreviated form (`emerg`, `crit`, `err`) and the full-word form (`emergency`, `critical`, `error`). All queries in this solution use `Severity in ("emerg", "emergency")` etc. to match both forms and prevent missed events.
+> **Important — Dual Severity Forms:** VMware systems may log both the abbreviated form (`emerg`, `crit`, `err`) and the full-word form (`emergency`, `critical`, `error`). The [AVSSyslog schema](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/avssyslog) lists the acceptable values as: `debug, info, notice, warn, err, crit, alert, emerg`. In practice, both abbreviated and full-word forms have been observed. All queries in this solution use `Severity in ("emerg", "emergency")` etc. to match both forms and prevent missed events.
 
 **Why only Severity 0–3?**
 - Severity 0–2 events (`emerg`, `alert`, `crit`) are rare and almost always indicate a real problem — they should trigger immediate alerts.
