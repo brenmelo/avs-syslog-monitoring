@@ -54,41 +54,29 @@
             "name": "infoBox",
             "type": "Microsoft.Common.InfoBox",
             "options": {
-              "text": "Select the action groups that will be notified when alerts fire. You can use the same group for all severities or separate groups. If you don't have one yet, create an Action Group first (Monitor → Action Groups).",
+              "text": "Select the action groups that will be notified when alerts fire. You can use the same group for all severities or separate groups. If you don't have one yet, create an Action Group first (Monitor → Action Groups). Leave a dropdown empty to skip that severity tier.",
               "style": "Info"
             }
           },
           {
-            "name": "enableSev0AG",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Assign action group for Severity 0 alerts (Emergency, Alert, Host-down, Heartbeat)"
-          },
-          {
             "name": "actionGroupSev0",
             "type": "Microsoft.Solutions.ResourceSelector",
-            "label": "Action Group — Severity 0",
-            "toolTip": "Notified for the most critical alerts.",
+            "label": "Action Group — Severity 0 (Emergency, Alert, Host-down, Heartbeat)",
+            "toolTip": "Notified for the most critical alerts. Leave empty to skip.",
             "resourceType": "Microsoft.Insights/actionGroups",
-            "visible": "[basics('enableSev0AG')]",
             "options": {
               "filter": {
                 "subscription": "onBasics",
                 "location": "all"
               }
             }
-          },
-          {
-            "name": "enableSev1AG",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Assign action group for Severity 1 alerts (Critical, VM, DNS, Role changes)"
           },
           {
             "name": "actionGroupSev1",
             "type": "Microsoft.Solutions.ResourceSelector",
-            "label": "Action Group — Severity 1",
-            "toolTip": "Notified for high-priority alerts.",
+            "label": "Action Group — Severity 1 (Critical, VM, DNS, Role changes)",
+            "toolTip": "Notified for high-priority alerts. Leave empty to skip.",
             "resourceType": "Microsoft.Insights/actionGroups",
-            "visible": "[basics('enableSev1AG')]",
             "options": {
               "filter": {
                 "subscription": "onBasics",
@@ -97,17 +85,11 @@
             }
           },
           {
-            "name": "enableSev2AG",
-            "type": "Microsoft.Common.CheckBox",
-            "label": "Assign action group for Severity 2 alerts (Error, DFW, Maintenance, Guest Reboot)"
-          },
-          {
             "name": "actionGroupSev2",
             "type": "Microsoft.Solutions.ResourceSelector",
-            "label": "Action Group — Severity 2",
-            "toolTip": "Notified for moderate-priority alerts.",
+            "label": "Action Group — Severity 2 (Error, DFW, Maintenance, Guest Reboot)",
+            "toolTip": "Notified for moderate-priority alerts. Leave empty to skip.",
             "resourceType": "Microsoft.Insights/actionGroups",
-            "visible": "[basics('enableSev2AG')]",
             "options": {
               "filter": {
                 "subscription": "onBasics",
@@ -273,9 +255,9 @@
       "location": "global",
       "workspaceResourceId": "[basics('workspaceSelector').id]",
       "alertNamePrefix": "[basics('alertNamePrefix')]",
-      "actionGroupIdSev0": "[if(steps('notifications').enableSev0AG, steps('notifications').actionGroupSev0.id, '')]",
-      "actionGroupIdSev1": "[if(steps('notifications').enableSev1AG, steps('notifications').actionGroupSev1.id, '')]",
-      "actionGroupIdSev2": "[if(steps('notifications').enableSev2AG, steps('notifications').actionGroupSev2.id, '')]",
+      "actionGroupIdSev0": "[if(empty(steps('notifications').actionGroupSev0.id), '', steps('notifications').actionGroupSev0.id)]",
+      "actionGroupIdSev1": "[if(empty(steps('notifications').actionGroupSev1.id), '', steps('notifications').actionGroupSev1.id)]",
+      "actionGroupIdSev2": "[if(empty(steps('notifications').actionGroupSev2.id), '', steps('notifications').actionGroupSev2.id)]",
       "errThresholdPer15m": "[steps('thresholds').errThresholdPer15m]",
       "dnsFailureThresholdPer15m": "[steps('thresholds').dnsFailureThresholdPer15m]",
       "dfwSpikeThresholdPer15m": "[steps('thresholds').dfwSpikeThresholdPer15m]",
