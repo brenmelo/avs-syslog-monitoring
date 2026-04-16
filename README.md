@@ -132,6 +132,63 @@ Repeat for each alert you want. The full KQL queries are listed below.
 
 ---
 
+## 3. Deploy Azure Service Health Alerts (recommended)
+
+Syslog alerts monitor what's happening **inside** your AVS environment. Azure Service Health alerts monitor what **Microsoft is doing** — service outages, planned maintenance (ESXi/vCenter/NSX upgrades), health advisories, and security advisories (VMSAs, CVEs). Both are needed for complete monitoring.
+
+### Why Service Health Alerts Matter for AVS
+
+Microsoft is responsible for patching, upgrading, and maintaining the AVS infrastructure ([shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)). Service Health is how Microsoft communicates:
+
+- **Service Issues** — Outages or degradations affecting your private cloud
+- **Planned Maintenance** — ESXi, vCenter, NSX, and vSAN upgrades (may cause brief VM connectivity interruptions during NSX upgrades)
+- **Health Advisories** — Actions recommended (e.g., enable compression, update VMware Tools)
+- **Security Advisories** — VMSAs and CVEs affecting AVS (e.g., VMSA-2025-0013, CVE-2025-22224)
+
+Many items in the [Azure VMware Solution known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) page are first communicated via Service Health.
+
+### Option A — One-click Deploy
+
+[![Deploy Service Health Alerts](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-service-health-alert-template.json)
+
+1. Click the button above.
+2. Select your **Subscription** and **Resource Group**.
+3. Choose an **existing action group** from the dropdown, OR enter an **email address** to create a new one.
+4. Check or uncheck which notification types to monitor (all enabled by default):
+   - Service Issues
+   - Planned Maintenance
+   - Health Advisories
+   - Security Advisories
+5. Click **Review + create** → **Create**.
+
+### Option B — Azure Portal (manual)
+
+1. Go to **Monitor → Service Health → Health alerts → + Create activity log alert**.
+2. Under **Scope**, select your subscription.
+3. Under **Condition**:
+   - **Services** → select **Azure VMware Solution**
+   - **Event types** → check all: Service issue, Planned maintenance, Health advisory, Security advisory
+4. Under **Actions**, select or create an action group.
+5. Under **Details**, name the alert (e.g., `AVS-ServiceHealth-Alert`).
+6. Click **Review + create** → **Create**.
+
+### Option C — Azure CLI
+
+```bash
+# Create a Service Health alert for AVS service issues
+az monitor activity-log alert create \
+  --name "AVS-ServiceHealth-ServiceIssues" \
+  --resource-group <your-rg> \
+  --condition category=ServiceHealth \
+  --condition-service "Azure VMware Solution" \
+  --action-group <action-group-resource-id> \
+  --description "AVS service issue alert"
+```
+
+> **Reference:** [Create Service Health alerts using ARM template](https://learn.microsoft.com/en-us/azure/service-health/alerts-activity-log-service-notifications-arm) | [Create Service Health alerts using the Azure portal](https://learn.microsoft.com/en-us/azure/service-health/alerts-activity-log-service-notifications-portal)
+
+---
+
 ## Alert Rules Reference
 
 ### Evaluation Window & Frequency
@@ -481,6 +538,7 @@ With the default prefix `AVS`:
 | `avs-syslog-workbook-gallery.json` | Raw workbook JSON for manual import via the Advanced Editor. |
 | `avs-syslog-alerts-deploy-template.json` | ARM template with 14 Scheduled Query Rules and per-alert boolean toggles. |
 | `createUiDefinition.json` | Custom portal UI for the alert deployment wizard (resource pickers, sliders). |
+| `avs-service-health-alert-template.json` | ARM template for Azure Service Health alerts filtered to Azure VMware Solution. |
 
 ---
 

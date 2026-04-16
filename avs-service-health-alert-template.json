@@ -1,0 +1,256 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "alertName": {
+      "type": "string",
+      "defaultValue": "AVS-ServiceHealth-Alert",
+      "metadata": {
+        "description": "Name of the Service Health alert rule."
+      }
+    },
+    "actionGroupId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Resource ID of an existing action group to notify. Leave empty to create a new email-only action group.",
+        "strongType": "Microsoft.Insights/actionGroups"
+      }
+    },
+    "emailAddress": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Email address for notifications (only used if no existing action group is provided)."
+      }
+    },
+    "newActionGroupName": {
+      "type": "string",
+      "defaultValue": "AVS-ServiceHealth-AG",
+      "metadata": {
+        "description": "Name of the new action group to create (only used if no existing action group is provided)."
+      }
+    },
+    "monitorServiceIssues": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Alert on service issues (outages, degradations)."
+      }
+    },
+    "monitorPlannedMaintenance": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Alert on planned maintenance (ESXi, vCenter, NSX upgrades)."
+      }
+    },
+    "monitorHealthAdvisories": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Alert on health advisories (action recommended)."
+      }
+    },
+    "monitorSecurityAdvisories": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Alert on security advisories (VMSAs, CVEs)."
+      }
+    }
+  },
+  "variables": {
+    "alertScope": "[format('/subscriptions/{0}', subscription().subscriptionId)]",
+    "useExistingAG": "[not(empty(parameters('actionGroupId')))]",
+    "effectiveActionGroupId": "[if(variables('useExistingAG'), parameters('actionGroupId'), resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName')))]"
+  },
+  "resources": [
+    {
+      "condition": "[not(variables('useExistingAG'))]",
+      "type": "Microsoft.Insights/actionGroups",
+      "apiVersion": "2023-01-01",
+      "name": "[parameters('newActionGroupName')]",
+      "location": "Global",
+      "properties": {
+        "groupShortName": "AVS-SH",
+        "enabled": true,
+        "emailReceivers": [
+          {
+            "name": "AVS-ServiceHealth-Email",
+            "emailAddress": "[parameters('emailAddress')]",
+            "useCommonAlertSchema": true
+          }
+        ]
+      }
+    },
+    {
+      "condition": "[parameters('monitorServiceIssues')]",
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "[format('{0}-ServiceIssues', parameters('alertName'))]",
+      "location": "Global",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName'))]"
+      ],
+      "properties": {
+        "scopes": [
+          "[variables('alertScope')]"
+        ],
+        "condition": {
+          "allOf": [
+            {
+              "field": "category",
+              "equals": "ServiceHealth"
+            },
+            {
+              "field": "properties.incidentType",
+              "equals": "Incident"
+            },
+            {
+              "field": "properties.impactedServices[*].ServiceName",
+              "containsAny": [
+                "Azure VMware Solution"
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            {
+              "actionGroupId": "[variables('effectiveActionGroupId')]"
+            }
+          ]
+        },
+        "enabled": true,
+        "description": "Alerts when Azure VMware Solution experiences a service issue (outage or degradation)."
+      }
+    },
+    {
+      "condition": "[parameters('monitorPlannedMaintenance')]",
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "[format('{0}-PlannedMaintenance', parameters('alertName'))]",
+      "location": "Global",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName'))]"
+      ],
+      "properties": {
+        "scopes": [
+          "[variables('alertScope')]"
+        ],
+        "condition": {
+          "allOf": [
+            {
+              "field": "category",
+              "equals": "ServiceHealth"
+            },
+            {
+              "field": "properties.incidentType",
+              "equals": "Maintenance"
+            },
+            {
+              "field": "properties.impactedServices[*].ServiceName",
+              "containsAny": [
+                "Azure VMware Solution"
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            {
+              "actionGroupId": "[variables('effectiveActionGroupId')]"
+            }
+          ]
+        },
+        "enabled": true,
+        "description": "Alerts when Azure VMware Solution has planned maintenance (ESXi, vCenter, NSX upgrades)."
+      }
+    },
+    {
+      "condition": "[parameters('monitorHealthAdvisories')]",
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "[format('{0}-HealthAdvisory', parameters('alertName'))]",
+      "location": "Global",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName'))]"
+      ],
+      "properties": {
+        "scopes": [
+          "[variables('alertScope')]"
+        ],
+        "condition": {
+          "allOf": [
+            {
+              "field": "category",
+              "equals": "ServiceHealth"
+            },
+            {
+              "field": "properties.incidentType",
+              "equals": "ActionRequired"
+            },
+            {
+              "field": "properties.impactedServices[*].ServiceName",
+              "containsAny": [
+                "Azure VMware Solution"
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            {
+              "actionGroupId": "[variables('effectiveActionGroupId')]"
+            }
+          ]
+        },
+        "enabled": true,
+        "description": "Alerts when Azure VMware Solution has health advisories (action recommended)."
+      }
+    },
+    {
+      "condition": "[parameters('monitorSecurityAdvisories')]",
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "[format('{0}-SecurityAdvisory', parameters('alertName'))]",
+      "location": "Global",
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName'))]"
+      ],
+      "properties": {
+        "scopes": [
+          "[variables('alertScope')]"
+        ],
+        "condition": {
+          "allOf": [
+            {
+              "field": "category",
+              "equals": "ServiceHealth"
+            },
+            {
+              "field": "properties.incidentType",
+              "equals": "Security"
+            },
+            {
+              "field": "properties.impactedServices[*].ServiceName",
+              "containsAny": [
+                "Azure VMware Solution"
+              ]
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            {
+              "actionGroupId": "[variables('effectiveActionGroupId')]"
+            }
+          ]
+        },
+        "enabled": true,
+        "description": "Alerts when Azure VMware Solution has security advisories (VMSAs, CVEs)."
+      }
+    }
+  ]
+}
