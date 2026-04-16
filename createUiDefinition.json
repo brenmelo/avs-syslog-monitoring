@@ -140,63 +140,71 @@
             "label": "Part 2 — Event-Specific Alerts",
             "elements": [
               {
+                "name": "eventInfoBox",
+                "type": "Microsoft.Common.InfoBox",
+                "options": {
+                  "text": "Each event alert is routed to the action group matching its Azure severity: Sev 0 = Emergency-tier, Sev 1 = High-tier, Sev 2 = Moderate-tier (as configured in the Action Groups step).",
+                  "style": "Info"
+                }
+              },
+              {
                 "name": "deployHostConnectionLost",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "Host Connection Lost",
+                "label": "Host Connection Lost → Sev 0",
                 "defaultValue": true
               },
               {
                 "name": "deployHostShutdown",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "Host Shutdown",
+                "label": "Host Shutdown → Sev 0",
                 "defaultValue": true
               },
               {
                 "name": "deployVmDisconnected",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "VM Disconnected",
+                "label": "VM Disconnected → Sev 1",
                 "defaultValue": true
               },
               {
                 "name": "deployVmRemovedFromInventory",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "VM Removed from Inventory",
+                "label": "VM Removed from Inventory → Sev 1",
                 "defaultValue": true
               },
               {
                 "name": "deployVmGuestReboot",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "VM Guest Reboot",
+                "label": "VM Guest Reboot → Sev 2",
                 "defaultValue": true
               },
               {
                 "name": "deployDnsFailures",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "DNS Failures (threshold-based)",
+                "label": "DNS Failures (threshold-based) → Sev 1",
                 "defaultValue": true
               },
               {
                 "name": "deployDfwSpike",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "Distributed Firewall Blocked Spike (threshold-based)",
+                "label": "Distributed Firewall Blocked Spike (threshold-based) → Sev 2",
                 "defaultValue": true
               },
               {
                 "name": "deployHostMaintenanceMode",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "Host Maintenance Mode",
+                "label": "Host Maintenance Mode → Sev 2",
                 "defaultValue": true
               },
               {
                 "name": "deployRolePermissionChanges",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "Role / Permission Changes (Security Audit)",
+                "label": "Role / Permission Changes (Security Audit) → Sev 1",
                 "defaultValue": true
               },
               {
                 "name": "deploySyslogIngestionHeartbeat",
                 "type": "Microsoft.Common.CheckBox",
-                "label": "Syslog Ingestion Heartbeat (no-data alert)",
+                "label": "Syslog Ingestion Heartbeat (no-data alert) → Sev 0",
                 "defaultValue": true
               }
             ]
