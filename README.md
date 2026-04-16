@@ -159,16 +159,18 @@ All alert rules use an **evaluation frequency of 5 minutes** with a **lookback w
 
 Syslog uses eight standard severity levels defined in [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1). This solution focuses on **Severity 0–3** as high-impact events that warrant alerting:
 
-| Level | Keyword | Meaning | Alerting Strategy |
-|:---:|---|---|---|
-| **0** | `emerg` / `emergency` | System is unusable | **Alert immediately** — any occurrence |
-| **1** | `alert` | Immediate action required | **Alert immediately** — any occurrence |
-| **2** | `crit` / `critical` | Critical condition (e.g. hardware failure) | **Alert immediately** — any occurrence |
-| **3** | `err` / `error` | Error condition | **Optional** — threshold-based (can be noisy) |
-| 4 | `warn` / `warning` | Warning — may indicate a developing issue | Monitor in workbook (no alert by default) |
-| 5 | `notice` | Normal but noteworthy | Monitor in workbook |
-| 6 | `info` | Informational | Monitor in workbook |
-| 7 | `debug` | Debug-level detail | Monitor in workbook |
+| Level | Keyword | Meaning | Examples | Alerting Strategy |
+|:---:|---|---|---|---|
+| **0** | `emerg` / `emergency` | System is unusable | Kernel panic, complete storage failure, host PSOD | **Alert immediately** — any occurrence |
+| **1** | `alert` | Immediate action required | Hardware failure requiring replacement, HA failover triggered | **Alert immediately** — any occurrence |
+| **2** | `crit` / `critical` | Critical condition | vSAN object inaccessible, disk group decommissioned, ESXi host disconnected | **Alert immediately** — excludes known noisy patterns |
+| **3** | `err` / `error` | Error condition | SOAP timeouts, NTP sync failures, snapshot consolidation errors | **Optional** — threshold-based (can be noisy) |
+| 4 | `warn` / `warning` | Warning — developing issue | High memory/CPU usage, certificate expiration approaching | Monitor in workbook (no alert by default) |
+| 5 | `notice` | Normal but noteworthy | User login events, configuration changes, VM power state changes | Monitor in workbook |
+| 6 | `info` | Informational | Routine heartbeats, backup completion, scheduled tasks | Monitor in workbook |
+| 7 | `debug` | Debug-level detail | Verbose API tracing, internal state dumps | Monitor in workbook |
+
+> **Shared Responsibility:** In Azure VMware Solution, Microsoft manages the underlying infrastructure (ESXi hosts, vSAN, NSX, vCenter). Events from platform components like `vsand`, `hostd`, `vpxd`, and `nsxd` are **Microsoft's responsibility** to address. Customers are responsible for monitoring and responding to events related to their workload VMs. See [Azure VMware Solution management](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage) and [known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues).
 
 > **Important — Dual Severity Forms:** VMware systems may log both the abbreviated form (`emerg`, `crit`, `err`) and the full-word form (`emergency`, `critical`, `error`). The [AVSSyslog schema](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/avssyslog) lists the acceptable values as: `debug, info, notice, warn, err, crit, alert, emerg`. In practice, both abbreviated and full-word forms have been observed. All queries in this solution use `Severity in ("emerg", "emergency")` etc. to match both forms and prevent missed events.
 
@@ -231,8 +233,11 @@ AVSSyslog
 ```kql
 AVSSyslog
 | where Severity in ("crit", "critical")
+| where not(Message has "outdated data collected, no calculation")
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
+
+> **Note:** The deployed alert rule automatically excludes the known noisy vSAN `outdated data collected` pattern. See [Known Noisy Events](#known-noisy-events--exclusion-filters) below.
 
 #### Sev2-Error (optional — can be noisy)
 
@@ -505,6 +510,47 @@ With the default prefix `AVS`:
 | `deployHostMaintenanceMode` | bool | `true` | Host Maintenance Mode alert. |
 | `deployRolePermissionChanges` | bool | `true` | Role/Permission Changes alert. |
 | `deploySyslogIngestionHeartbeat` | bool | `true` | Syslog Ingestion Heartbeat alert. |
+
+---
+
+## Known Noisy Events & Exclusion Filters
+
+VMware platform components can generate large volumes of severity `critical` and `error` events that are **infrastructure-level diagnostic messages managed by Microsoft** — not customer-actionable problems. The workbook displays all events for full visibility with grouping panels, but the **alert rules exclude known noisy patterns** to prevent alert fatigue.
+
+### vSAN `CalculateHostStats` — Critical Severity
+
+The vSAN daemon (`vsand`) frequently logs messages like:
+
+```
+calculator::CalculateHostStats Mode highResolutionClusterMode: outdated data collected, no calculation
+```
+
+This is a vSAN performance statistics collection message — it means the high-resolution stats data was already stale when collected, so vSAN skipped the calculation. **This does not indicate data loss, storage degradation, or any customer-impacting issue.** A single host can generate 18+ duplicate messages every 2 minutes, resulting in 1,000+ events per day per host.
+
+**Why it's safe to exclude from alerting:**
+- The vSAN daemon is **managed by Microsoft** as part of the AVS infrastructure ([shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage))
+- The message indicates a stats calculation was skipped, not a storage failure
+- Similar vSAN alerts are documented as informational in the [Azure VMware Solution known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) page
+- If the pattern changes (e.g., volume increases significantly or messages shift to actual failures), the workbook's **Top Repeated Critical Messages** panel will make this visible
+
+**Exclusion filter used in the Sev1-Critical alert rule:**
+```kql
+| where not(Message has "outdated data collected, no calculation")
+```
+
+**If you create alerts manually**, add this filter after the severity filter. If you use the **Deploy to Azure** button, it's already included.
+
+### Adding Custom Exclusions
+
+If your environment has other noisy patterns, you can add exclusions after deployment by editing the alert rule in **Monitor → Alerts → Alert rules → Edit**. Add additional `where not(...)` clauses:
+
+```kql
+AVSSyslog
+| where Severity in ("crit", "critical")
+| where not(Message has "outdated data collected, no calculation")
+| where not(Message has "your-other-noisy-pattern-here")
+| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+```
 
 ---
 

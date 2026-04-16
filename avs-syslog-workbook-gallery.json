@@ -145,7 +145,7 @@
     {
       "type": 1,
       "content": {
-        "json": "---\n## Overview — Severity Distribution\n\nSyslog uses eight standard severity levels (RFC 5424). This dashboard highlights **Severity 0–3** as high-impact events:\n\n| Level | Keyword | Meaning |\n|---|---|---|\n| **0** | `emerg` / `emergency` | System is unusable |\n| **1** | `alert` | Immediate action required |\n| **2** | `crit` / `critical` | Critical condition (e.g. hardware failure) |\n| **3** | `err` / `error` | Error condition |\n| 4 | `warning` | Warning — may indicate a developing issue |\n| 5 | `notice` | Normal but noteworthy |\n| 6 | `info` | Informational |\n| 7 | `debug` | Debug-level detail |"
+"json": "---\n## Overview \u2014 Severity Distribution\n\nSyslog uses eight standard severity levels ([RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1)). This dashboard highlights **Severity 0\u20133** as high-impact events:\n\n| Level | Keyword | Meaning | Examples |\n|---|---|---|---|\n| **0** | `emerg` / `emergency` | System is unusable | Kernel panic, complete storage failure, host PSOD |\n| **1** | `alert` | Immediate action required | Hardware failure requiring replacement, HA failover triggered |\n| **2** | `crit` / `critical` | Critical condition | vSAN object inaccessible, disk group decommissioned, ESXi host disconnected |\n| **3** | `err` / `error` | Error condition | SOAP timeouts, NTP sync failures, snapshot consolidation errors |\n| 4 | `warn` / `warning` | Warning \u2014 developing issue | High memory/CPU usage, certificate expiration approaching |\n| 5 | `notice` | Normal but noteworthy | User login events, configuration changes, VM power state changes |\n| 6 | `info` | Informational | Routine heartbeats, backup completion, scheduled tasks |\n| 7 | `debug` | Debug-level detail | Verbose API tracing, internal state dumps |\n\n> **Shared Responsibility:** In Azure VMware Solution, Microsoft manages the underlying infrastructure (ESXi hosts, vSAN, NSX, vCenter). Events from platform components like `vsand`, `hostd`, `vpxd`, and `nsxd` are **Microsoft\u2019s responsibility**. Customers are responsible for workload VM events. See [Azure VMware Solution management](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)."
       },
       "name": "section-overview"
     },
@@ -381,6 +381,30 @@
       "name": "emerg-grid"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "#### Understanding the emergency event count\n\n**Emergency (Severity 0)** events indicate the system is unusable \u2014 kernel panics, complete storage failures, or host PSOD events. In Azure VMware Solution, **these are managed entirely by Microsoft**. Microsoft\u2019s automated monitoring detects and remediates them. Monitor for visibility and open a [support request](https://portal.azure.com/#create/Microsoft.Support) if they persist.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
+      },
+      "name": "emerg-explanation"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| extend NormalizedMessage = replace_regex(Message, @\"^\\d{4}-\\d{2}-\\d{2}T[^\\s]+\\s+\\S+\\s+\", \"\")\n| extend MessagePreview = substring(NormalizedMessage, 0, 120)\n| summarize Count = count(), Hosts = dcount(HostName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by AppName, MessagePreview\n| order by Count desc\n| take 20",
+        "size": 1,
+        "title": "Top Repeated Emergency Messages (grouped)",
+        "noDataMessage": "\ud83d\udfe2 HEALTHY",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": { "formatters": [{ "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "redDark" } }] },
+        "showExportToExcel": true,
+        "crossComponentResources": ["{Workspace}"],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "emerg-top-repeated"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
@@ -416,6 +440,30 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "alert-grid"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "#### Understanding the alert event count\n\n**Alert (Severity 1)** events require immediate action \u2014 hardware failures triggering HA failovers, for example. In Azure VMware Solution, **Microsoft manages the physical hardware and HA infrastructure**. If alert events come from platform components (`hostd`, `vpxd`, `nsxd`), Microsoft will detect and respond automatically. If events relate to customer workloads, the customer should investigate.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
+      },
+      "name": "alert-explanation"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| extend NormalizedMessage = replace_regex(Message, @\"^\\d{4}-\\d{2}-\\d{2}T[^\\s]+\\s+\\S+\\s+\", \"\")\n| extend MessagePreview = substring(NormalizedMessage, 0, 120)\n| summarize Count = count(), Hosts = dcount(HostName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by AppName, MessagePreview\n| order by Count desc\n| take 20",
+        "size": 1,
+        "title": "Top Repeated Alert Messages (grouped)",
+        "noDataMessage": "\ud83d\udfe2 HEALTHY",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": { "formatters": [{ "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "red" } }] },
+        "showExportToExcel": true,
+        "crossComponentResources": ["{Workspace}"],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "alert-top-repeated"
     },
     {
       "type": 3,
@@ -459,6 +507,47 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "crit-grid"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "#### Understanding the critical event count\n\n**Critical (Severity 2)** events indicate serious conditions such as hardware failures, disk group issues, or host disconnections. In Azure VMware Solution, a **high count of critical events is often caused by known noisy VMware services** \u2014 particularly the vSAN daemon (`vsand`) which generates large volumes of `calculator::CalculateHostStats ... outdated data collected` messages. These are **infrastructure-level diagnostic messages managed by Microsoft** and do not indicate data loss or storage degradation.\n\n**The deployed alert rule for Critical events automatically excludes this known noisy pattern** so you only get notified for genuine critical events. The workbook panels below show all critical events for full visibility, with grouping to help you distinguish noise from real issues.\n\n> **Reference:** [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage) | [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues)"
+      },
+      "name": "crit-explanation"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| summarize Count = count() by AppName\n| order by Count desc\n| take 15",
+        "size": 1,
+        "title": "Critical Events by Source (AppName)",
+        "queryType": 0,
+        "visualization": "barchart",
+        "chartSettings": { "xAxis": "AppName", "yAxis": ["Count"] },
+        "crossComponentResources": ["{Workspace}"],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "customWidth": "50",
+      "name": "crit-by-source"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| extend NormalizedMessage = replace_regex(Message, @\"^\\d{4}-\\d{2}-\\d{2}T[^\\s]+\\s+\\S+\\s+\", \"\")\n| extend MessagePreview = substring(NormalizedMessage, 0, 120)\n| summarize Count = count(), Hosts = dcount(HostName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by AppName, MessagePreview\n| order by Count desc\n| take 20",
+        "size": 1,
+        "title": "Top Repeated Critical Messages (grouped by message text; first 120 characters shown)",
+        "noDataMessage": "\ud83d\udfe2 HEALTHY",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": { "formatters": [{ "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "orange" } }] },
+        "showExportToExcel": true,
+        "crossComponentResources": ["{Workspace}"],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "customWidth": "50",
+      "name": "crit-top-repeated"
     },
     {
       "type": 3,
