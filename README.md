@@ -91,7 +91,7 @@ If you deployed the workbook in Step 1, open it and click the **Deploy to Azure*
 2. Click the **Deploy to Azure** button shown above.
 3. A guided wizard walks you through:
    - **Basics** — Subscription, resource group, Log Analytics workspace.
-   - **Action Groups** — Pick existing action groups for Severity 0, 1, and 2.
+   - **Action Groups** — Select existing action groups from dropdowns for Severity 0, 1, and 2 (leave empty to skip a tier).
    - **Select Alerts** — Check or uncheck each of the 14 alert rules.
    - **Thresholds** — Sliders for volume-based alerts (Error, DNS, DFW).
 4. Click **Review + create** → **Create**.
