@@ -1,0 +1,82 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "config": {
+      "isWizard": false,
+      "basics": {
+        "description": "Deploy Azure Service Health alerts filtered to Azure VMware Solution. Get notified about outages, planned maintenance, health advisories, and security advisories.",
+        "location": {
+          "visible": false
+        },
+        "subscription": {
+          "resourceProviders": ["Microsoft.Insights"]
+        },
+        "resourceGroup": {
+          "allowExisting": true
+        }
+      }
+    },
+    "basics": [
+      {
+        "name": "alertName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Alert Name",
+        "defaultValue": "AVS-ServiceHealth-Alert",
+        "toolTip": "Base name for the Service Health alert rules.",
+        "constraints": {
+          "required": true,
+          "regex": "^[a-zA-Z0-9-]{1,50}$",
+          "validationMessage": "Only letters, numbers, and hyphens. Max 50 characters."
+        }
+      },
+      {
+        "name": "actionGroupSelector",
+        "type": "Microsoft.Solutions.ResourceSelector",
+        "label": "Action Group",
+        "toolTip": "Select the action group to notify when Service Health events occur.",
+        "resourceType": "Microsoft.Insights/actionGroups",
+        "options": {
+          "filter": {
+            "subscription": "onBasics",
+            "location": "all"
+          }
+        }
+      },
+      {
+        "name": "monitorServiceIssues",
+        "type": "Microsoft.Common.CheckBox",
+        "label": "Service Issues (outages, degradations)",
+        "defaultValue": true
+      },
+      {
+        "name": "monitorPlannedMaintenance",
+        "type": "Microsoft.Common.CheckBox",
+        "label": "Planned Maintenance (ESXi, vCenter, NSX upgrades)",
+        "defaultValue": true
+      },
+      {
+        "name": "monitorHealthAdvisories",
+        "type": "Microsoft.Common.CheckBox",
+        "label": "Health Advisories (action recommended)",
+        "defaultValue": true
+      },
+      {
+        "name": "monitorSecurityAdvisories",
+        "type": "Microsoft.Common.CheckBox",
+        "label": "Security Advisories (VMSAs, CVEs)",
+        "defaultValue": true
+      }
+    ],
+    "steps": [],
+    "outputs": {
+      "alertName": "[basics('alertName')]",
+      "actionGroupId": "[basics('actionGroupSelector').id]",
+      "monitorServiceIssues": "[basics('monitorServiceIssues')]",
+      "monitorPlannedMaintenance": "[basics('monitorPlannedMaintenance')]",
+      "monitorHealthAdvisories": "[basics('monitorHealthAdvisories')]",
+      "monitorSecurityAdvisories": "[basics('monitorSecurityAdvisories')]"
+    }
+  }
+}

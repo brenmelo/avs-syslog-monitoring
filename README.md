@@ -179,7 +179,7 @@ Many items in the [Azure VMware Solution known issues](https://learn.microsoft.c
 
 ### Option A — One-click Deploy
 
-[![Deploy Service Health Alerts](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-service-health-alert-template.json)
+[![Deploy Service Health Alerts](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-service-health-alert-template.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2FcreateUiDefinition-service-health.json)
 
 1. Click the button above.
 2. Select your **Subscription** and **Resource Group**.
@@ -569,6 +569,7 @@ With the default prefix `AVS`:
 | `avs-syslog-alerts-deploy-template.json` | ARM template with 14 Scheduled Query Rules and per-alert boolean toggles. |
 | `createUiDefinition.json` | Custom portal UI for the alert deployment wizard (resource pickers, sliders). |
 | `avs-service-health-alert-template.json` | ARM template for Azure Service Health alerts filtered to Azure VMware Solution. |
+| `createUiDefinition-service-health.json` | Custom portal UI for the Service Health deployment (action group picker). |
 
 ---
 
