@@ -42,7 +42,7 @@ The workbook gives you real-time dashboards for severity distribution, event-spe
 [![Deploy Workbook to Azure](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-syslog-workbook-deploy-template.json)
 
 1. Click the button above.
-2. Select your **Subscription** and **Resource Group**.
+2. Select your **Subscription**, **Resource Group**, and **Region**.
 3. Optionally change the workbook display name (default: `AVS Syslog Monitoring`).
 4. Click **Review + create** → **Create**.
 5. Open the workbook and select your **Log Analytics workspace** from the dropdown inside.
@@ -120,7 +120,7 @@ If you deployed the workbook in Step 1, open it and click the **Deploy to Azure*
 1. Open your deployed workbook: **Monitor → Workbooks → AVS Syslog Monitoring**.
 2. Click the **Deploy to Azure** button shown above.
 3. A guided wizard walks you through:
-   - **Basics** — Subscription, resource group, Log Analytics workspace.
+   - **Basics** — Subscription, resource group, region, Log Analytics workspace.
    - **Action Groups** — Select existing action groups from dropdowns for Severity 0, 1, and 2 (leave empty to skip a tier).
    - **Select Alerts** — Check or uncheck each of the 14 alert rules.
    - **Thresholds** — Sliders for volume-based alerts (Error, DNS, DFW).
@@ -182,7 +182,7 @@ Many items in the [Azure VMware Solution known issues](https://learn.microsoft.c
 [![Deploy Service Health Alerts](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-service-health-alert-template.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2FcreateUiDefinition-service-health.json)
 
 1. Click the button above.
-2. Select your **Subscription** and **Resource Group**.
+2. Select your **Subscription**, **Resource Group**, and **Region**.
 3. Select an **existing action group** from the dropdown (create one first if needed — see [Section 2](#before-you-begin--create-an-action-group)).
 4. Check or uncheck which notification types to monitor (all enabled by default):
    - Service Issues
