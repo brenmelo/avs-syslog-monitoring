@@ -1,6 +1,21 @@
 # AVS Syslog Monitoring — Workbook & Alerts
 
-Pre-built Azure Monitor **Workbook** and **14 alert rules** for monitoring [Azure VMware Solution (AVS)](https://learn.microsoft.com/en-us/azure/azure-vmware/) syslog events. Everything runs against the `AVSSyslog` Log Analytics table.
+Pre-built Azure Monitor **Workbook** (~40 panels) and **14 syslog alert rules** for monitoring [Azure VMware Solution (AVS)](https://learn.microsoft.com/en-us/azure/azure-vmware/) — running against the `AVSSyslog` Log Analytics table.
+
+### The core solution
+
+- **Workbook** — Severity distribution, per-severity drill-downs (Emergency/Alert/Critical/Error) with explanations and grouped Top Repeated Messages, event-specific views (host failures, VM changes, DNS, DFW, maintenance, role/permission changes), per-host health heatmap, and syslog ingestion pipeline health.
+- **14 alert rules** — Scheduled query alerts across three severity tiers:
+  - **Sev 0** — Emergency, Alert, host connection lost, host shutdown, syslog ingestion heartbeat
+  - **Sev 1** — Critical, VM disconnected/removed, DNS failures, role & permission changes
+  - **Sev 2** — Error, DFW spikes, host maintenance mode, VM guest reboots
+  - *(Critical alert excludes known-noisy vSAN `CalculateHostStats` messages — see [Known Noisy Events](#known-noisy-events).)*
+
+### Also included
+
+- **4 Azure Service Health alerts** — Activity-log alerts filtered to AVS for Service Issues, Planned Maintenance (ESXi/vCenter/NSX/vSAN upgrades), Health Advisories, and Security Advisories (VMSAs/CVEs). Covers the Microsoft side of the [shared responsibility model](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage).
+- **Guided deployment wizards** — `createUiDefinition` portal experiences with action group pickers, alert toggles, threshold sliders, and region selection. One-click **Deploy to Azure** buttons for each artifact.
+- **Operational guidance** — Severity model explanation, action group strategy across 10 notification types (Email, SMS, Teams, Webhook, ITSM, Logic App, Function, Runbook, etc.), and known noisy events that are safely filtered.
 
 ---
 
