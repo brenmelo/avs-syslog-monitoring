@@ -8,7 +8,7 @@
       "basics": {
         "description": "Deploy AVS Syslog alert rules to monitor your Azure VMware Solution private cloud. This wizard lets you pick which alerts to enable and configure notification action groups.",
         "location": {
-          "visible": false
+          "visible": true
         },
         "subscription": {
           "resourceProviders": ["Microsoft.Insights"]
@@ -260,7 +260,7 @@
       }
     ],
     "outputs": {
-      "location": "global",
+      "location": "[location()]",
       "workspaceResourceId": "[basics('workspaceSelector').id]",
       "alertNamePrefix": "[basics('alertNamePrefix')]",
       "actionGroupIdSev0": "[if(empty(steps('notifications').actionGroupSev0.id), '', steps('notifications').actionGroupSev0.id)]",
