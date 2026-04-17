@@ -8,7 +8,7 @@
       "basics": {
         "description": "Deploy Azure Service Health alerts filtered to Azure VMware Solution. Get notified about outages, planned maintenance, health advisories, and security advisories.",
         "location": {
-          "visible": false
+          "visible": true
         },
         "subscription": {
           "resourceProviders": ["Microsoft.Insights"]
@@ -71,7 +71,7 @@
     ],
     "steps": [],
     "outputs": {
-      "location": "global",
+      "location": "[location()]",
       "alertName": "[basics('alertName')]",
       "actionGroupId": "[basics('actionGroupSelector').id]",
       "monitorServiceIssues": "[basics('monitorServiceIssues')]",
