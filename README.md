@@ -81,6 +81,36 @@ Once deployed, the workbook includes:
 
 ## 2. Deploy the Alert Rules
 
+### Before You Begin — Create an Action Group
+
+Alert rules require at least one **Action Group** to define who gets notified and how. If you don't have one yet, create one before deploying alerts.
+
+**Create an Action Group:** Go to **Monitor → Alerts → Action groups → + Create**.
+
+| Notification Type | Use Case | Setup |
+|---|---|---|
+| **Email** | Direct email to on-call engineers or distribution lists | Add email addresses under the **Notifications** tab |
+| **SMS** | Urgent alerts to mobile phones | Add phone numbers under **Notifications** |
+| **Azure mobile app** | Push notifications to the Azure app on your phone | Enable under **Notifications** → Azure app push |
+| **Voice call** | Phone call for critical after-hours alerts | Add phone numbers under **Notifications** |
+| **Microsoft Teams** | Post alerts to a Teams channel for team visibility | Under **Actions** → select **Microsoft Teams** and pick the channel ([docs](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/action-groups#microsoft-teams)) |
+| **Webhook** | Integrate with ticketing systems (ServiceNow, PagerDuty, Jira, etc.) | Under **Actions** → add a **Webhook** with the endpoint URL from your ITSM tool |
+| **ITSM Connector** | Bi-directional integration with ServiceNow, System Center, etc. | Under **Actions** → select **ITSM** ([docs](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/itsmc-overview)) |
+| **Logic App** | Custom workflows — auto-create tickets, enrich alerts, notify Slack, etc. | Under **Actions** → select **Logic App** and choose your workflow |
+| **Azure Function** | Run custom code on alert (e.g., auto-remediation scripts) | Under **Actions** → select **Azure Function** |
+| **Automation Runbook** | Execute PowerShell/Python runbooks for automated response | Under **Actions** → select **Automation Runbook** |
+
+**Recommended strategy for AVS syslog monitoring:**
+
+- **Minimum setup** — One action group with email notifications, used across all severity tiers.
+- **Tiered setup** — Three action groups (one per severity tier) with escalating urgency:
+  - **Sev 0** (Emergency/Alert/Host-down/Heartbeat) → Email + SMS + Voice call + Teams channel
+  - **Sev 1** (Critical/VM/DNS/Role changes) → Email + Teams channel
+  - **Sev 2** (Error/DFW/Maintenance/Guest Reboot) → Email only (or Teams)
+- **Enterprise setup** — Action groups with webhook or ITSM integration to automatically create tickets in ServiceNow, PagerDuty, or Jira. Use Logic Apps for custom enrichment workflows (e.g., auto-tagging, Slack notifications, or runbooks for automated response).
+
+> **Reference:** [Create and manage action groups](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/action-groups) | [IT Service Management Connector](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/itsmc-overview)
+
 ### Option A — Deploy from the Workbook (recommended)
 
 If you deployed the workbook in Step 1, open it and click the **Deploy to Azure** button at the top of the workbook:
