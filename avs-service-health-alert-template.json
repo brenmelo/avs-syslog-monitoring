@@ -6,29 +6,14 @@
       "type": "string",
       "defaultValue": "AVS-ServiceHealth-Alert",
       "metadata": {
-        "description": "Name of the Service Health alert rule."
+        "description": "Base name for the Service Health alert rules."
       }
     },
     "actionGroupId": {
       "type": "string",
-      "defaultValue": "",
       "metadata": {
-        "description": "Resource ID of an existing action group to notify. Leave empty to create a new email-only action group.",
+        "description": "Resource ID of the action group to notify when Service Health events occur.",
         "strongType": "Microsoft.Insights/actionGroups"
-      }
-    },
-    "emailAddress": {
-      "type": "string",
-      "defaultValue": "",
-      "metadata": {
-        "description": "Email address for notifications (only used if no existing action group is provided)."
-      }
-    },
-    "newActionGroupName": {
-      "type": "string",
-      "defaultValue": "AVS-ServiceHealth-AG",
-      "metadata": {
-        "description": "Name of the new action group to create (only used if no existing action group is provided)."
       }
     },
     "monitorServiceIssues": {
@@ -61,38 +46,15 @@
     }
   },
   "variables": {
-    "alertScope": "[format('/subscriptions/{0}', subscription().subscriptionId)]",
-    "useExistingAG": "[not(empty(parameters('actionGroupId')))]",
-    "effectiveActionGroupId": "[if(variables('useExistingAG'), parameters('actionGroupId'), resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName')))]"
+    "alertScope": "[format('/subscriptions/{0}', subscription().subscriptionId)]"
   },
   "resources": [
-    {
-      "condition": "[not(variables('useExistingAG'))]",
-      "type": "Microsoft.Insights/actionGroups",
-      "apiVersion": "2023-01-01",
-      "name": "[parameters('newActionGroupName')]",
-      "location": "Global",
-      "properties": {
-        "groupShortName": "AVS-SH",
-        "enabled": true,
-        "emailReceivers": [
-          {
-            "name": "AVS-ServiceHealth-Email",
-            "emailAddress": "[parameters('emailAddress')]",
-            "useCommonAlertSchema": true
-          }
-        ]
-      }
-    },
     {
       "condition": "[parameters('monitorServiceIssues')]",
       "type": "Microsoft.Insights/activityLogAlerts",
       "apiVersion": "2020-10-01",
       "name": "[format('{0}-ServiceIssues', parameters('alertName'))]",
       "location": "Global",
-      "dependsOn": [
-        "[resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName'))]"
-      ],
       "properties": {
         "scopes": [
           "[variables('alertScope')]"
@@ -118,7 +80,7 @@
         "actions": {
           "actionGroups": [
             {
-              "actionGroupId": "[variables('effectiveActionGroupId')]"
+              "actionGroupId": "[parameters('actionGroupId')]"
             }
           ]
         },
@@ -132,9 +94,6 @@
       "apiVersion": "2020-10-01",
       "name": "[format('{0}-PlannedMaintenance', parameters('alertName'))]",
       "location": "Global",
-      "dependsOn": [
-        "[resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName'))]"
-      ],
       "properties": {
         "scopes": [
           "[variables('alertScope')]"
@@ -160,7 +119,7 @@
         "actions": {
           "actionGroups": [
             {
-              "actionGroupId": "[variables('effectiveActionGroupId')]"
+              "actionGroupId": "[parameters('actionGroupId')]"
             }
           ]
         },
@@ -174,9 +133,6 @@
       "apiVersion": "2020-10-01",
       "name": "[format('{0}-HealthAdvisory', parameters('alertName'))]",
       "location": "Global",
-      "dependsOn": [
-        "[resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName'))]"
-      ],
       "properties": {
         "scopes": [
           "[variables('alertScope')]"
@@ -202,7 +158,7 @@
         "actions": {
           "actionGroups": [
             {
-              "actionGroupId": "[variables('effectiveActionGroupId')]"
+              "actionGroupId": "[parameters('actionGroupId')]"
             }
           ]
         },
@@ -216,9 +172,6 @@
       "apiVersion": "2020-10-01",
       "name": "[format('{0}-SecurityAdvisory', parameters('alertName'))]",
       "location": "Global",
-      "dependsOn": [
-        "[resourceId('Microsoft.Insights/actionGroups', parameters('newActionGroupName'))]"
-      ],
       "properties": {
         "scopes": [
           "[variables('alertScope')]"
@@ -244,7 +197,7 @@
         "actions": {
           "actionGroups": [
             {
-              "actionGroupId": "[variables('effectiveActionGroupId')]"
+              "actionGroupId": "[parameters('actionGroupId')]"
             }
           ]
         },

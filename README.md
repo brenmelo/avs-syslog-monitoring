@@ -183,7 +183,7 @@ Many items in the [Azure VMware Solution known issues](https://learn.microsoft.c
 
 1. Click the button above.
 2. Select your **Subscription** and **Resource Group**.
-3. Choose an **existing action group** from the dropdown, OR enter an **email address** to create a new one.
+3. Select an **existing action group** from the dropdown (create one first if needed — see [Section 2](#before-you-begin--create-an-action-group)).
 4. Check or uncheck which notification types to monitor (all enabled by default):
    - Service Issues
    - Planned Maintenance
