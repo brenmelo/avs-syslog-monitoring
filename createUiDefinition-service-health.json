@@ -71,6 +71,7 @@
     ],
     "steps": [],
     "outputs": {
+      "location": "global",
       "alertName": "[basics('alertName')]",
       "actionGroupId": "[basics('actionGroupSelector').id]",
       "monitorServiceIssues": "[basics('monitorServiceIssues')]",
