@@ -64,8 +64,8 @@
             "type": "Microsoft.Common.InfoBox",
             "options": {
               "icon": "None",
-              "text": "Don't have an action group yet? Create one in the Azure portal first, then return to this wizard.",
-              "uri": "https://portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/Microsoft.Insights%2FactionGroups",
+              "text": "Don't have an action group yet? Open the action group creation wizard in a new tab, finish it, then come back here and refresh the dropdowns.",
+              "uri": "https://portal.azure.com/#create/Microsoft.ActionGroup",
               "style": "Upsell"
             }
           },
