@@ -148,7 +148,7 @@
             "type": "Microsoft.Common.InfoBox",
             "options": {
               "icon": "Info",
-              "text": "Pick a preset to enable a curated set of alerts, or choose Custom to fine-tune individual alerts. If you enabled 'Use the same action group for all severities' in the previous step, all alerts route to that single group.",
+              "text": "Custom (default) opens the alert list with the recommended set pre-selected so you can fine-tune. Use All Enabled for full coverage, or Minimal for a Sev 0–only pilot. If you enabled 'Use the same action group for all severities' in the previous step, all alerts route to that single group.",
               "style": "Info"
             }
           },
@@ -156,50 +156,15 @@
             "name": "alertPreset",
             "type": "Microsoft.Common.OptionsGroup",
             "label": "Alert Preset",
-            "defaultValue": "Recommended (curated defaults)",
-            "toolTip": "Choose a preset, then expand the details panel below to see exactly which alerts will be deployed.",
+            "defaultValue": "Custom (recommended defaults pre-selected)",
+            "toolTip": "Custom = the recommended alerts are pre-selected and editable. All Enabled = every alert (noisier). Minimal = Sev 0 + Heartbeat + Host-down only.",
             "constraints": {
               "allowedValues": [
-                { "label": "Recommended (curated defaults)", "value": "Recommended" },
+                { "label": "Custom (recommended defaults pre-selected)", "value": "Custom" },
                 { "label": "All Enabled (full coverage, noisier)", "value": "All" },
-                { "label": "Minimal (Sev 0 + Host-down + Heartbeat only)", "value": "Minimal" },
-                { "label": "Custom (pick individual alerts below)", "value": "Custom" }
+                { "label": "Minimal (Sev 0 + Host-down + Heartbeat only)", "value": "Minimal" }
               ],
               "required": true
-            }
-          },
-          {
-            "name": "presetDetailsRecommended",
-            "type": "Microsoft.Common.InfoBox",
-            "visible": "[equals(steps('alertSelection').alertPreset, 'Recommended')]",
-            "options": {
-              "icon": "Info",
-              "style": "Info",
-              "text": "Recommended preset — 12 of 14 alerts enabled (curated for production). Sev 2 Error is OFF by default (high-volume — enable only after tuning). See breakdown below."
-            }
-          },
-          {
-            "name": "previewRecommendedSev0",
-            "type": "Microsoft.Common.TextBlock",
-            "visible": "[equals(steps('alertSelection').alertPreset, 'Recommended')]",
-            "options": {
-              "text": "🔴 Sev 0 — Critical (5):  ✅ Emergency  •  ✅ Alert  •  ✅ Host Connection Lost  •  ✅ Host Shutdown  •  ✅ Syslog Ingestion Heartbeat"
-            }
-          },
-          {
-            "name": "previewRecommendedSev1",
-            "type": "Microsoft.Common.TextBlock",
-            "visible": "[equals(steps('alertSelection').alertPreset, 'Recommended')]",
-            "options": {
-              "text": "🟠 Sev 1 — High (5):  ✅ Critical  •  ✅ VM Disconnected  •  ✅ VM Removed from Inventory  •  ✅ DNS Failures  •  ✅ Role / Permission Changes"
-            }
-          },
-          {
-            "name": "previewRecommendedSev2",
-            "type": "Microsoft.Common.TextBlock",
-            "visible": "[equals(steps('alertSelection').alertPreset, 'Recommended')]",
-            "options": {
-              "text": "🟡 Sev 2 — Moderate (3 of 4):  ✅ Host Maintenance Mode  •  ✅ VM Guest Reboot  •  ✅ DFW Blocked Spike  •  ❌ Sev 2 Error (off — switch to Custom or All to enable)"
             }
           },
           {
@@ -277,7 +242,7 @@
             "options": {
               "icon": "Info",
               "style": "Info",
-              "text": "Custom — Pick individual alerts below. The default checkbox values match the Recommended preset; toggle any to fine-tune."
+              "text": "Custom — The recommended set of alerts is pre-selected (12 of 14, with Sev 2 Error off by default). Toggle any checkbox below to fine-tune. Switch to All Enabled or Minimal above for one-click presets."
             }
           },
           {
@@ -421,7 +386,7 @@
           {
             "name": "infoBox",
             "type": "Microsoft.Common.InfoBox",
-            "visible": "[or(or(equals(steps('alertSelection').alertPreset, 'All'), and(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').severitySection.deploySev2Error)), or(equals(steps('alertSelection').alertPreset, 'Recommended'), and(equals(steps('alertSelection').alertPreset, 'Custom'), or(steps('alertSelection').eventSection.deployDnsFailures, steps('alertSelection').eventSection.deployDfwSpike))))]",
+            "visible": "[or(equals(steps('alertSelection').alertPreset, 'All'), and(equals(steps('alertSelection').alertPreset, 'Custom'), or(steps('alertSelection').severitySection.deploySev2Error, or(steps('alertSelection').eventSection.deployDnsFailures, steps('alertSelection').eventSection.deployDfwSpike))))]",
             "options": {
               "text": "These three alerts are volume-based — individual events are normal, but a spike indicates a problem. All other alerts in this solution fire on first occurrence (severity-based or discrete events like host shutdowns) and don't need a threshold. Thresholds apply per host per 15-minute evaluation window. See the README threshold-tuning guide for help adjusting these values. Only thresholds for alerts you've enabled are shown below.",
               "style": "Info"
@@ -430,7 +395,7 @@
           {
             "name": "noThresholdsBox",
             "type": "Microsoft.Common.InfoBox",
-            "visible": "[and(and(not(equals(steps('alertSelection').alertPreset, 'All')), not(equals(steps('alertSelection').alertPreset, 'Recommended'))), or(equals(steps('alertSelection').alertPreset, 'Minimal'), and(equals(steps('alertSelection').alertPreset, 'Custom'), and(not(steps('alertSelection').severitySection.deploySev2Error), and(not(steps('alertSelection').eventSection.deployDnsFailures), not(steps('alertSelection').eventSection.deployDfwSpike))))))]",
+            "visible": "[or(equals(steps('alertSelection').alertPreset, 'Minimal'), and(equals(steps('alertSelection').alertPreset, 'Custom'), and(not(steps('alertSelection').severitySection.deploySev2Error), and(not(steps('alertSelection').eventSection.deployDnsFailures), not(steps('alertSelection').eventSection.deployDfwSpike)))))]",
             "options": {
               "text": "No threshold-based alerts are enabled in your selection — nothing to configure on this step. Click Next to continue to Review + create.",
               "style": "Info"
@@ -451,7 +416,7 @@
           {
             "name": "dnsFailureThresholdPer15m",
             "type": "Microsoft.Common.Slider",
-            "visible": "[or(or(equals(steps('alertSelection').alertPreset, 'All'), equals(steps('alertSelection').alertPreset, 'Recommended')), and(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').eventSection.deployDnsFailures))]",
+            "visible": "[or(equals(steps('alertSelection').alertPreset, 'All'), and(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').eventSection.deployDnsFailures))]",
             "label": "DNS failure threshold (per 15 min)",
             "subLabel": "failures",
             "defaultValue": 10,
@@ -463,7 +428,7 @@
           {
             "name": "dfwSpikeThresholdPer15m",
             "type": "Microsoft.Common.Slider",
-            "visible": "[or(or(equals(steps('alertSelection').alertPreset, 'All'), equals(steps('alertSelection').alertPreset, 'Recommended')), and(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').eventSection.deployDfwSpike))]",
+            "visible": "[or(equals(steps('alertSelection').alertPreset, 'All'), and(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').eventSection.deployDfwSpike))]",
             "label": "DFW blocked spike threshold (per 15 min)",
             "subLabel": "blocks",
             "defaultValue": 50,
@@ -485,20 +450,20 @@
       "errThresholdPer15m": "[steps('thresholds').errThresholdPer15m]",
       "dnsFailureThresholdPer15m": "[steps('thresholds').dnsFailureThresholdPer15m]",
       "dfwSpikeThresholdPer15m": "[steps('thresholds').dfwSpikeThresholdPer15m]",
-      "deploySev0Emergency": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').severitySection.deploySev0Emergency)))]",
-      "deploySev0Alert": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').severitySection.deploySev0Alert)))]",
-      "deploySev1Critical": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').severitySection.deploySev1Critical)))]",
-      "deploySev2Error": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), false, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').severitySection.deploySev2Error)))]",
-      "deployHostConnectionLost": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deployHostConnectionLost)))]",
-      "deployHostShutdown": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deployHostShutdown)))]",
-      "deployVmDisconnected": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmDisconnected)))]",
-      "deployVmRemovedFromInventory": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmRemovedFromInventory)))]",
-      "deployVmGuestReboot": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmGuestReboot)))]",
-      "deployDnsFailures": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployDnsFailures)))]",
-      "deployDfwSpike": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployDfwSpike)))]",
-      "deployHostMaintenanceMode": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployHostMaintenanceMode)))]",
-      "deployRolePermissionChanges": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployRolePermissionChanges)))]",
-      "deploySyslogIngestionHeartbeat": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deploySyslogIngestionHeartbeat)))]"
+      "deploySev0Emergency": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').severitySection.deploySev0Emergency)))]",
+      "deploySev0Alert": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').severitySection.deploySev0Alert)))]",
+      "deploySev1Critical": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').severitySection.deploySev1Critical)))]",
+      "deploySev2Error": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').severitySection.deploySev2Error)))]",
+      "deployHostConnectionLost": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deployHostConnectionLost)))]",
+      "deployHostShutdown": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deployHostShutdown)))]",
+      "deployVmDisconnected": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmDisconnected)))]",
+      "deployVmRemovedFromInventory": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmRemovedFromInventory)))]",
+      "deployVmGuestReboot": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmGuestReboot)))]",
+      "deployDnsFailures": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployDnsFailures)))]",
+      "deployDfwSpike": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployDfwSpike)))]",
+      "deployHostMaintenanceMode": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployHostMaintenanceMode)))]",
+      "deployRolePermissionChanges": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployRolePermissionChanges)))]",
+      "deploySyslogIngestionHeartbeat": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deploySyslogIngestionHeartbeat)))]"
     }
   }
 }
