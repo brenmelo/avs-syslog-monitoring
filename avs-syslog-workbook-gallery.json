@@ -1061,12 +1061,19 @@
       "name": "heartbeat-tile"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "### 📈 Ingestion volume\n\nThis chart shows the **number of syslog records (event count)** ingested into the `AVSSyslog` table, bucketed in 5-minute windows. Y-axis labels like `400K` / `600K` are **thousands of events, not kilobytes** — e.g. `499 K` means ~499,000 events in that bin. Use this to confirm the pipeline is alive and that volume is in its normal band: sustained drops to 0 indicate a forwarder or Data Collection Rule problem; large sustained spikes can indicate a misbehaving host or a new noisy source.\n\n> Want **billed data size in MB** instead of event count? Replace `count()` in the query below with `sum(_BilledSize) / 1024.0 / 1024.0` and rename the series to `IngestedMB`."
+      },
+      "name": "ingestion-volume-explainer"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| summarize EventCount = count() by bin(TimeGenerated, 5m)\n| order by TimeGenerated asc",
         "size": 0,
-        "title": "AVSSyslog Ingestion Volume (events per 5 minutes)",
+        "title": "AVSSyslog Ingestion Volume — event count per 5 minutes (Y-axis K = thousands of events, not KB)",
         "queryType": 0,
         "visualization": "areachart",
         "chartSettings": {
