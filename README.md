@@ -438,6 +438,7 @@ AVSSyslog
 ```kql
 AVSSyslog
 | where Message has "vmdisconnectedevent"
+| where not(Message has "com.vmware.vsan.health")  // exclude vSAN health-check test VMs
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
 
@@ -455,6 +456,7 @@ AVSSyslog
 ```kql
 AVSSyslog
 | where Message has "vmremovedevent"
+| where not(Message has "com.vmware.vsan.health")  // exclude vSAN health-check test VMs
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
 
