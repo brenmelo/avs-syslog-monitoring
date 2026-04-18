@@ -156,14 +156,14 @@
             "name": "alertPreset",
             "type": "Microsoft.Common.OptionsGroup",
             "label": "Alert Preset",
-            "defaultValue": "Recommended",
+            "defaultValue": "Recommended (curated defaults)",
             "toolTip": "Recommended = curated defaults. All = enable every alert (noisier). Minimal = Sev 0 + Heartbeat + Host-down only. Custom = pick individual alerts below.",
             "constraints": {
               "allowedValues": [
-                { "label": "✅ Recommended (default)", "value": "Recommended" },
-                { "label": "🟢 All Enabled (full coverage, noisier)", "value": "All" },
-                { "label": "🔇 Minimal (Sev 0 + Host-down + Heartbeat only)", "value": "Minimal" },
-                { "label": "⚙️ Custom (pick individual alerts below)", "value": "Custom" }
+                { "label": "Recommended (curated defaults)", "value": "Recommended" },
+                { "label": "All Enabled (full coverage, noisier)", "value": "All" },
+                { "label": "Minimal (Sev 0 + Host-down + Heartbeat only)", "value": "Minimal" },
+                { "label": "Custom (pick individual alerts below)", "value": "Custom" }
               ],
               "required": true
             }
