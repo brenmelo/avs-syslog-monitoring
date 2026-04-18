@@ -157,7 +157,7 @@
             "type": "Microsoft.Common.OptionsGroup",
             "label": "Alert Preset",
             "defaultValue": "Recommended (curated defaults)",
-            "toolTip": "Recommended = curated defaults. All = enable every alert (noisier). Minimal = Sev 0 + Heartbeat + Host-down only. Custom = pick individual alerts below.",
+            "toolTip": "Choose a preset, then expand the details panel below to see exactly which alerts will be deployed.",
             "constraints": {
               "allowedValues": [
                 { "label": "Recommended (curated defaults)", "value": "Recommended" },
@@ -166,6 +166,46 @@
                 { "label": "Custom (pick individual alerts below)", "value": "Custom" }
               ],
               "required": true
+            }
+          },
+          {
+            "name": "presetDetailsRecommended",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'Recommended')]",
+            "options": {
+              "icon": "Info",
+              "style": "Info",
+              "text": "Recommended (12 of 14 alerts) — Sev 0: Emergency, Alert, Host Connection Lost, Host Shutdown, Syslog Ingestion Heartbeat. Sev 1: Critical, VM Disconnected, VM Removed from Inventory, DNS Failures, Role/Permission Changes. Sev 2: Host Maintenance Mode, VM Guest Reboot, DFW Blocked Spike. Excludes (off by default): Sev 2 Error (high volume), and you can still toggle individual alerts using Custom."
+            }
+          },
+          {
+            "name": "presetDetailsAll",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'All')]",
+            "options": {
+              "icon": "Warning",
+              "style": "Warning",
+              "text": "All Enabled (14 of 14 alerts) — Everything in Recommended PLUS Sev 2 Error (err/error events from any AppName). Use only if you have tuned thresholds and exclusions for your environment, or you risk a noisy on-call rotation."
+            }
+          },
+          {
+            "name": "presetDetailsMinimal",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'Minimal')]",
+            "options": {
+              "icon": "Info",
+              "style": "Info",
+              "text": "Minimal (5 of 14 alerts) — Sev 0 only: Emergency, Alert, Host Connection Lost, Host Shutdown, Syslog Ingestion Heartbeat. Use this for production pilots, or to prove out the routing/action-group setup before turning on Sev 1 and Sev 2."
+            }
+          },
+          {
+            "name": "presetDetailsCustom",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'Custom')]",
+            "options": {
+              "icon": "Info",
+              "style": "Info",
+              "text": "Custom — Pick individual alerts below. Defaults shown next to each checkbox match the Recommended preset."
             }
           },
           {
