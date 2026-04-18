@@ -177,9 +177,21 @@
                   "text": ""
                 },
                 {
+                  "operator": ">",
+                  "thresholdValue": "100",
+                  "representation": "redBright",
+                  "text": ""
+                },
+                {
+                  "operator": ">",
+                  "thresholdValue": "10",
+                  "representation": "orange",
+                  "text": ""
+                },
+                {
                   "operator": "Default",
                   "thresholdValue": null,
-                  "representation": "redBright",
+                  "representation": "yellow",
                   "text": ""
                 }
               ]
