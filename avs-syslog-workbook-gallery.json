@@ -165,7 +165,7 @@
           },
           "leftContent": {
             "columnMatch": "Count",
-            "formatter": 12,
+            "formatter": 11,
             "formatOptions": {
               "thresholdsOptions": "colors",
               "thresholdsGrid": [
