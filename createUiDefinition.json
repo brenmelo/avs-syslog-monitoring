@@ -386,7 +386,7 @@
           {
             "name": "infoBox",
             "type": "Microsoft.Common.InfoBox",
-            "visible": "[or(equals(steps('alertSelection').alertPreset, 'All'), and(equals(steps('alertSelection').alertPreset, 'Custom'), or(steps('alertSelection').severitySection.deploySev2Error, or(steps('alertSelection').eventSection.deployDnsFailures, steps('alertSelection').eventSection.deployDfwSpike))))]",
+            "visible": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), if(steps('alertSelection').severitySection.deploySev2Error, true, if(steps('alertSelection').eventSection.deployDnsFailures, true, steps('alertSelection').eventSection.deployDfwSpike)), false))]",
             "options": {
               "text": "These three alerts are volume-based — individual events are normal, but a spike indicates a problem. All other alerts in this solution fire on first occurrence (severity-based or discrete events like host shutdowns) and don't need a threshold. Thresholds apply per host per 15-minute evaluation window. See the README threshold-tuning guide for help adjusting these values. Only thresholds for alerts you've enabled are shown below.",
               "style": "Info"
@@ -395,7 +395,7 @@
           {
             "name": "noThresholdsBox",
             "type": "Microsoft.Common.InfoBox",
-            "visible": "[or(equals(steps('alertSelection').alertPreset, 'Minimal'), and(equals(steps('alertSelection').alertPreset, 'Custom'), and(not(steps('alertSelection').severitySection.deploySev2Error), and(not(steps('alertSelection').eventSection.deployDnsFailures), not(steps('alertSelection').eventSection.deployDfwSpike)))))]",
+            "visible": "[if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), if(steps('alertSelection').severitySection.deploySev2Error, false, if(steps('alertSelection').eventSection.deployDnsFailures, false, not(steps('alertSelection').eventSection.deployDfwSpike))), false))]",
             "options": {
               "text": "No threshold-based alerts are enabled in your selection — nothing to configure on this step. Click Next to continue to Review + create.",
               "style": "Info"
@@ -404,7 +404,7 @@
           {
             "name": "errThresholdPer15m",
             "type": "Microsoft.Common.Slider",
-            "visible": "[or(equals(steps('alertSelection').alertPreset, 'All'), and(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').severitySection.deploySev2Error))]",
+            "visible": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').severitySection.deploySev2Error, false))]",
             "label": "Error events threshold (per 15 min)",
             "subLabel": "events",
             "defaultValue": 5,
@@ -416,7 +416,7 @@
           {
             "name": "dnsFailureThresholdPer15m",
             "type": "Microsoft.Common.Slider",
-            "visible": "[or(equals(steps('alertSelection').alertPreset, 'All'), and(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').eventSection.deployDnsFailures))]",
+            "visible": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').eventSection.deployDnsFailures, false))]",
             "label": "DNS failure threshold (per 15 min)",
             "subLabel": "failures",
             "defaultValue": 10,
@@ -428,7 +428,7 @@
           {
             "name": "dfwSpikeThresholdPer15m",
             "type": "Microsoft.Common.Slider",
-            "visible": "[or(equals(steps('alertSelection').alertPreset, 'All'), and(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').eventSection.deployDfwSpike))]",
+            "visible": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').eventSection.deployDfwSpike, false))]",
             "label": "DFW blocked spike threshold (per 15 min)",
             "subLabel": "blocks",
             "defaultValue": 50,
