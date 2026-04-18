@@ -153,7 +153,7 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "let tableExists = toscalar(union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime)[]) | summarize count()) > 0;\nlet actual = union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\", \"alert\", \"crit\", \"critical\", \"err\", \"error\")\n| extend SeverityGroup = case(\n    Severity in (\"emerg\", \"emergency\"), \"Emergency (0)\",\n    Severity == \"alert\", \"Alert (1)\",\n    Severity in (\"crit\", \"critical\"), \"Critical (2)\",\n    Severity in (\"err\", \"error\"), \"Error (3)\",\n    \"\")\n| summarize Count = count() by SeverityGroup;\nlet defaults = datatable(SeverityGroup:string, Count:long) [\n    \"Emergency (0)\", 0,\n    \"Alert (1)\", 0,\n    \"Critical (2)\", 0,\n    \"Error (3)\", 0\n];\nunion actual, defaults\n| summarize Count = sum(Count) by SeverityGroup\n| extend Status = case(not(tableExists), \"⚠️ No Data\", Count == 0, \"🟢 HEALTHY\", Count > 100, strcat(\"🔴 \", tostring(Count), \" events\"), Count > 10, strcat(\"🟠 \", tostring(Count), \" events\"), strcat(\"🟡 \", tostring(Count), \" events\"))\n| extend SortOrder = case(SeverityGroup == \"Emergency (0)\", 0, SeverityGroup == \"Alert (1)\", 1, SeverityGroup == \"Critical (2)\", 2, SeverityGroup == \"Error (3)\", 3, 99)\n| order by SortOrder asc\n| project SeverityGroup, Count, Status",
+        "query": "let tableExists = toscalar(union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime)[]) | summarize count()) > 0;\nlet actual = union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\", \"alert\", \"crit\", \"critical\", \"err\", \"error\")\n| extend SeverityGroup = case(\n    Severity in (\"emerg\", \"emergency\"), \"Emergency (0)\",\n    Severity == \"alert\", \"Alert (1)\",\n    Severity in (\"crit\", \"critical\"), \"Critical (2)\",\n    Severity in (\"err\", \"error\"), \"Error (3)\",\n    \"\")\n| summarize Count = count() by SeverityGroup;\nlet defaults = datatable(SeverityGroup:string, Count:long) [\n    \"Emergency (0)\", 0,\n    \"Alert (1)\", 0,\n    \"Critical (2)\", 0,\n    \"Error (3)\", 0\n];\nunion actual, defaults\n| summarize Count = sum(Count) by SeverityGroup\n| extend Status = case(not(tableExists), "⚠️ No Data", Count == 0, "🟢 HEALTHY", "")\n| extend SortOrder = case(SeverityGroup == \"Emergency (0)\", 0, SeverityGroup == \"Alert (1)\", 1, SeverityGroup == \"Critical (2)\", 2, SeverityGroup == \"Error (3)\", 3, 99)\n| order by SortOrder asc\n| project SeverityGroup, Count, Status",
         "size": 3,
         "title": "High-Impact Events by Severity (0–3 only)",
         "queryType": 0,
@@ -165,7 +165,25 @@
           },
           "leftContent": {
             "columnMatch": "Count",
-            "formatter": 1,
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "redBright",
+              "thresholdsOptions": "colors",
+              "thresholdsGrid": [
+                {
+                  "operator": "==",
+                  "thresholdValue": "0",
+                  "representation": "green",
+                  "text": ""
+                },
+                {
+                  "operator": "Default",
+                  "thresholdValue": null,
+                  "representation": "redBright",
+                  "text": ""
+                }
+              ]
+            },
             "numberFormat": {
               "unit": 0,
               "options": {
