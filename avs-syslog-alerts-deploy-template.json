@@ -4,9 +4,9 @@
   "parameters": {
     "location": {
       "type": "string",
-      "defaultValue": "global",
+      "defaultValue": "[resourceGroup().location]",
       "metadata": {
-        "description": "Location for scheduled query rules. Use global unless your organization requires a regional location."
+        "description": "Azure region for the scheduled query rules. Must match the Log Analytics workspace region. Defaults to the resource group location."
       }
     },
     "workspaceResourceId": {
@@ -621,9 +621,9 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where TimeGenerated > ago(30m)\n| summarize Count = count()",
+              "query": "AVSSyslog\n| summarize LastIngest = max(TimeGenerated)\n| where isnull(LastIngest) or LastIngest < ago(30m)",
               "timeAggregation": "Count",
-              "operator": "Equal",
+              "operator": "GreaterThan",
               "threshold": 0,
               "failingPeriods": {
                 "numberOfEvaluationPeriods": 1,

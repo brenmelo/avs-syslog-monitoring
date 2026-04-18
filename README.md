@@ -17,6 +17,8 @@ Pre-built Azure Monitor **Workbook** (~40 panels) and **14 syslog alert rules** 
 - **Guided deployment wizards** — `createUiDefinition` portal experiences with action group pickers, alert toggles, threshold sliders, and region selection. One-click **Deploy to Azure** buttons for each artifact.
 - **Operational guidance** — Severity model explanation, action group strategy across 10 notification types (Email, SMS, Teams, Webhook, ITSM, Logic App, Function, Runbook, etc.), and known noisy events that are safely filtered.
 
+> **✅ Validated against Microsoft docs:** All event-specific KQL patterns (host shutdown, VM disconnected, DNS failures, DFW logs, role changes, maintenance mode, etc.) match Microsoft's official [Queries for the AVSSyslog table](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/queries/avssyslog) reference verbatim.
+
 ---
 
 ## 📑 Table of Contents
@@ -556,16 +558,16 @@ AVSSyslog
 | **Frequency** | Every 5 minutes |
 | **Lookback Window** | 30 minutes |
 | **Aggregation** | Count |
-| **Operator / Threshold** | Equal to 0 (fires when **no** data arrives) |
+| **Operator / Threshold** | Greater than 0 (alerts when query returns a row indicating no recent ingest) |
 | **Default** | ✅ Enabled |
 
 ```kql
 AVSSyslog
-| where TimeGenerated > ago(30m)
-| summarize Count = count()
+| summarize LastIngest = max(TimeGenerated)
+| where isnull(LastIngest) or LastIngest < ago(30m)
 ```
 
-> This alert fires when the count equals zero — meaning no syslog data has been ingested in 30 minutes. Set the condition to `Equal` → `0`.
+> **How this works:** The query returns a row only when the last ingest time is missing or older than 30 minutes. The alert fires when row count is greater than 0 (i.e., the unhealthy condition is true). This is the standard "absence of data" pattern for log-based alerts. The previous `summarize count() | == 0` form does **not** work because `summarize count()` always returns exactly one row, so the count condition would never be met.
 
 ---
 

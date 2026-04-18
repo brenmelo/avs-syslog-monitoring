@@ -1,19 +1,4 @@
-{
-  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-    "workbookDisplayName": {
-      "type": "string",
-      "defaultValue": "AVS Syslog Monitoring",
-      "metadata": {
-        "description": "The display name of the workbook."
-      }
-    }
-  },
-  "variables": {
-    "workbookId": "[guid(parameters('workbookDisplayName'), resourceGroup().id)]",
-    "workbookContent":
-    {
+{ "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#", "contentVersion": "1.0.0.0", "parameters": { "workbookDisplayName": { "type": "string", "defaultValue": "AVS Syslog Monitoring", "metadata": { "description": "The display name of the workbook." } } }, "variables": { "workbookId": "[guid(parameters('workbookDisplayName'), resourceGroup().id)]", "workbookContent":     {
       "version": "Notebook/1.0",
       "items": [
         {
@@ -1047,22 +1032,4 @@
         "{Workspace}"
       ],
       "fromTemplateId": "sentinel-UserWorkbook"
-    }
-  },
-  "resources": [
-    {
-      "type": "Microsoft.Insights/workbooks",
-      "apiVersion": "2023-06-01",
-      "name": "[variables('workbookId')]",
-      "location": "[resourceGroup().location]",
-      "kind": "shared",
-      "properties": {
-        "displayName": "[parameters('workbookDisplayName')]",
-        "serializedData": "[string(variables('workbookContent'))]",
-        "version": "Notebook/1.0",
-        "sourceId": "Azure Monitor",
-        "category": "workbook"
-      }
-    }
-  ]
-}
+    } }, "resources": [ { "type": "Microsoft.Insights/workbooks", "apiVersion": "2023-06-01", "name": "[variables('workbookId')]", "location": "[resourceGroup().location]", "kind": "shared", "properties": { "displayName": "[parameters('workbookDisplayName')]", "serializedData": "[string(variables('workbookContent'))]", "version": "Notebook/1.0", "sourceId": "Azure Monitor", "category": "workbook" } } ] }
