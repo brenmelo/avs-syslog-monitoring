@@ -799,12 +799,50 @@
       "name": "host-events-grid"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "**Why does \"VM Removed from Inventory\" show such a high count?**\n\nA large `VmRemovedEvent` count (often hundreds per day on a healthy cluster) is almost always **vSAN health-check noise**, not real VM deletions. vSAN periodically creates short-lived test VMs to validate datastore health, then removes them — every create/remove pair generates a `vim.event.VmRemovedEvent` tagged with `[com.vmware.vsan.health]`.\n\nReal customer-actionable VM removals look different — they reference an actual workload VM name, a user/admin in the event, and don't carry the vSAN health-check tag.\n\n- **Top Repeated VM Events** (below) groups events by message pattern so you can see which ones are dominant.\n- **VM Lifecycle Events** (table) shows the raw stream with `VM Removed from Inventory` included alongside disconnect/reboot/power/create."
+      },
+      "name": "vm-events-info"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"vmdisconnectedevent\", \"vmremovedevent\", \"VmGuestRebootEvent\", \"VmPowerStateChangedEvent\", \"vmcreatedevent\")\n| extend EventType = case(\n    Message has \"vmremovedevent\", \"VM Removed from Inventory\",\n    Message has \"vmdisconnectedevent\", \"VM Disconnected\",\n    Message has \"VmGuestRebootEvent\", \"VM Guest Reboot\",\n    Message has \"VmPowerStateChangedEvent\", \"VM Power State Changed\",\n    Message has \"vmcreatedevent\", \"VM Created\",\n    \"Other\")\n| extend Source = case(\n    Message has \"com.vmware.vsan.health\", \"vSAN health-check (noise)\",\n    Message has \"com.vmware.\", extract(@\"\\[com\\.vmware\\.([\\w\\.]+)\\]\", 1, Message),\n    \"Customer / vCenter\")\n| summarize Count = count(), Hosts = dcount(HostName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by EventType, Source\n| order by Count desc",
+        "size": 1,
+        "title": "Top Repeated VM Events (grouped by event type + source — shows whether a high count is vSAN health-check noise or real activity)",
+        "noDataMessage": "🟢 HEALTHY — No VM lifecycle events in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Count",
+              "formatter": 8,
+              "formatOptions": { "palette": "blue" }
+            },
+            {
+              "columnMatch": "Source",
+              "formatter": 1
+            }
+          ]
+        },
+        "showExportToExcel": true,
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "vm-events-grouped"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"vmdisconnectedevent\", \"vmremovedevent\", \"VmGuestRebootEvent\", \"VmPowerStateChangedEvent\", \"vmcreatedevent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
         "size": 1,
-        "title": "VM Events (disconnected, deleted, rebooted, power change, created)",
+        "title": "VM Lifecycle Events — raw stream (disconnected, removed from inventory, rebooted, power change, created)",
         "noDataMessage": "🟢 HEALTHY",
         "queryType": 0,
         "visualization": "table",
