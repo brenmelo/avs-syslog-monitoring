@@ -167,20 +167,31 @@
             "columnMatch": "Count",
             "formatter": 12,
             "formatOptions": {
-              "palette": "redBright",
               "thresholdsOptions": "colors",
               "thresholdsGrid": [
                 {
                   "operator": "==",
                   "thresholdValue": "0",
                   "representation": "green",
-                  "text": ""
+                  "text": "{0}{1}"
+                },
+                {
+                  "operator": ">",
+                  "thresholdValue": "100",
+                  "representation": "redBright",
+                  "text": "{0}{1}"
+                },
+                {
+                  "operator": ">",
+                  "thresholdValue": "10",
+                  "representation": "red",
+                  "text": "{0}{1}"
                 },
                 {
                   "operator": "Default",
                   "thresholdValue": null,
-                  "representation": "redBright",
-                  "text": ""
+                  "representation": "orange",
+                  "text": "{0}{1}"
                 }
               ]
             },
