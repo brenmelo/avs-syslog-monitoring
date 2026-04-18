@@ -167,7 +167,22 @@
             "columnMatch": "Count",
             "formatter": 12,
             "formatOptions": {
-              "palette": "greenRed"
+              "palette": "redBright",
+              "thresholdsOptions": "colors",
+              "thresholdsGrid": [
+                {
+                  "operator": "==",
+                  "thresholdValue": "0",
+                  "representation": "green",
+                  "text": ""
+                },
+                {
+                  "operator": "Default",
+                  "thresholdValue": null,
+                  "representation": "redBright",
+                  "text": ""
+                }
+              ]
             },
             "numberFormat": {
               "unit": 0,
