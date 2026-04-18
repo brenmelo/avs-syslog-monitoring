@@ -9,7 +9,7 @@ Pre-built Azure Monitor **Workbook** (~40 panels) and **14 syslog alert rules** 
   - **Sev 0** — Emergency, Alert, host connection lost, host shutdown, syslog ingestion heartbeat
   - **Sev 1** — Critical, VM disconnected/removed, DNS failures, role & permission changes
   - **Sev 2** — Error, DFW spikes, host maintenance mode, VM guest reboots
-  - *(Critical alert excludes known-noisy vSAN `CalculateHostStats` messages — see [Known Noisy Events](#known-noisy-events).)*
+  - *(Critical alert excludes ~99% of Microsoft-managed vSAN/control-plane noise from `vsand`, `clomd`, `clomd-whatif`, `etcd` — see [Known Noisy Events](#-known-noisy-events--exclusion-filters).)*
 
 ### Also included
 
@@ -352,11 +352,13 @@ AVSSyslog
 ```kql
 AVSSyslog
 | where Severity in ("crit", "critical")
-| where not(Message has "outdated data collected, no calculation")
+| where not(AppName == "vsand" and Message has "CalculateHostStats")
+| where not(AppName in ("clomd", "clomd-whatif"))
+| where not(AppName == "etcd" and Message has "failed to purge snap file")
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
 
-> **Note:** The deployed alert rule automatically excludes the known noisy vSAN `outdated data collected` pattern. See [Known Noisy Events](#known-noisy-events--exclusion-filters) below.
+> **Note:** The deployed alert rule automatically excludes ~99% of platform noise from Microsoft-managed vSAN/control-plane components (`vsand`, `clomd`, `clomd-whatif`, `etcd`). See [Known Noisy Events](#-known-noisy-events--exclusion-filters) below.
 
 #### Sev2-Error (optional — can be noisy)
 
@@ -638,28 +640,33 @@ With the default prefix `AVS`:
 
 VMware platform components can generate large volumes of severity `critical` and `error` events that are **infrastructure-level diagnostic messages managed by Microsoft** — not customer-actionable problems. The workbook displays all events for full visibility with grouping panels, but the **alert rules exclude known noisy patterns** to prevent alert fatigue.
 
-### vSAN `CalculateHostStats` — Critical Severity
+### Excluded sources (Sev 1 Critical alert)
 
-The vSAN daemon (`vsand`) frequently logs messages like:
+Analysis of real AVS environments shows ~99% of "critical" syslog events come from four Microsoft-managed vSAN/control-plane components that customers cannot patch or reconfigure:
 
-```
-calculator::CalculateHostStats Mode highResolutionClusterMode: outdated data collected, no calculation
-```
+| AppName | Pattern | What it is |
+|---|---|---|
+| `vsand` | `calculator::CalculateHostStats ... outdated data` | vSAN stats calculator — high-res data was stale, calc skipped. No data loss. ~895 events / 1,000 sample. |
+| `clomd` | `CLOMDecomMonitor` / `CLOMDecomCMMDSResponseCb` / `CLOM_CrawlItem` | vSAN Cluster-Level Object Manager looking up already-deleted decommission objects. Self-resolving. ~89 events / 1,000 sample. |
+| `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation — informational, daemon logs it at "critical". ~13 events / 1,000 sample. |
+| `etcd` | `failed to purge snap file ... device or resource busy` | etcd housekeeping retry — transient lock on snap file purge, self-resolves. ~3 events / 1,000 sample. |
 
-This is a vSAN performance statistics collection message — it means the high-resolution stats data was already stale when collected, so vSAN skipped the calculation. **This does not indicate data loss, storage degradation, or any customer-impacting issue.** A single host can generate 18+ duplicate messages every 2 minutes, resulting in 1,000+ events per day per host.
-
-**Why it's safe to exclude from alerting:**
-- The vSAN daemon is **managed by Microsoft** as part of the AVS infrastructure ([shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage))
-- The message indicates a stats calculation was skipped, not a storage failure
-- Similar vSAN alerts are documented as informational in the [Azure VMware Solution known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) page
-- If the pattern changes (e.g., volume increases significantly or messages shift to actual failures), the workbook's **Top Repeated Critical Messages** panel will make this visible
+**Why it's safe to exclude:**
+- All four are part of the **Microsoft-managed AVS infrastructure** ([shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)) — customers cannot patch, restart, or reconfigure them.
+- The "critical" severity reflects the daemon's internal log level, not actionable customer impact.
+- Real customer-actionable critical events come from `hostd`, `vmkernel`, `vpxd`, NSX components — these are **not** excluded.
+- If the pattern changes (volume spikes, new sources appear), the workbook's **Top Repeated Critical Messages** and **Critical Events by Source** panels will make it visible.
 
 **Exclusion filter used in the Sev1-Critical alert rule:**
 ```kql
-| where not(Message has "outdated data collected, no calculation")
+| where not(AppName == "vsand" and Message has "CalculateHostStats")
+| where not(AppName in ("clomd", "clomd-whatif"))
+| where not(AppName == "etcd" and Message has "failed to purge snap file")
 ```
 
-**If you create alerts manually**, add this filter after the severity filter. If you use the **Deploy to Azure** button, it's already included.
+**If you create alerts manually**, add these filters after the severity filter. If you use the **Deploy to Azure** button, they're already included.
+
+**Workbook visibility:** A dedicated **🟠 Customer-Actionable Critical Events** panel in the workbook applies the same exclusions, giving operators a clear "what to look at" view alongside the full unfiltered critical event grid.
 
 ### Adding Custom Exclusions
 
@@ -668,7 +675,9 @@ If your environment has other noisy patterns, you can add exclusions after deplo
 ```kql
 AVSSyslog
 | where Severity in ("crit", "critical")
-| where not(Message has "outdated data collected, no calculation")
+| where not(AppName == "vsand" and Message has "CalculateHostStats")
+| where not(AppName in ("clomd", "clomd-whatif"))
+| where not(AppName == "etcd" and Message has "failed to purge snap file")
 | where not(Message has "your-other-noisy-pattern-here")
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```

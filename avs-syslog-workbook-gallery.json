@@ -511,7 +511,7 @@
     {
       "type": 1,
       "content": {
-        "json": "#### Understanding the critical event count\n\n**Critical (Severity 2)** events indicate serious conditions such as hardware failures, disk group issues, or host disconnections. In Azure VMware Solution, a **high count of critical events is often caused by known noisy VMware services** \u2014 particularly the vSAN daemon (`vsand`) which generates large volumes of `calculator::CalculateHostStats ... outdated data collected` messages. These are **infrastructure-level diagnostic messages managed by Microsoft** and do not indicate data loss or storage degradation.\n\n**The deployed alert rule for Critical events automatically excludes this known noisy pattern** so you only get notified for genuine critical events. The workbook panels below show all critical events for full visibility, with grouping to help you distinguish noise from real issues.\n\n> **Reference:** [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage) | [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues)"
+        "json": "#### Understanding the critical event count\n\n**Critical (Severity 2)** events indicate serious conditions such as hardware failures, disk group issues, or host disconnections. In Azure VMware Solution, **the vast majority of critical events come from Microsoft-managed vSAN/control-plane components** that you cannot patch or reconfigure:\n\n| AppName | Pattern | Why it's noise |\n|---|---|---|\n| `vsand` | `calculator::CalculateHostStats ... outdated data` | vSAN stats calculator retry \u2014 transient, self-healing |\n| `clomd` | `CLOMDecomMonitor` / `CLOMDecomCMMDSResponseCb` / `CLOM_CrawlItem` | vSAN Cluster-Level Object Manager looking up already-deleted decommission objects |\n| `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation \u2014 informational |\n| `etcd` | `failed to purge snap file ... device or resource busy` | etcd housekeeping retry \u2014 self-resolves |\n\n**The deployed Critical alert rule excludes all four sources** so you only get notified for customer-actionable critical events (`hostd`, `vmkernel`, `vpxd`, real ESXi/NSX issues). The workbook panels below show all critical events for full visibility, plus a dedicated **Customer-Actionable Critical Events** panel that applies the same exclusions.\n\n> **Reference:** [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage) | [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues)"
       },
       "name": "crit-explanation"
     },
@@ -548,6 +548,22 @@
       },
       "customWidth": "50",
       "name": "crit-top-repeated"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"failed to purge snap file\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+        "size": 0,
+        "title": "\ud83d\udfe0 Customer-Actionable Critical Events (vSAN/etcd platform noise excluded)",
+        "noDataMessage": "\ud83d\udfe2 HEALTHY \u2014 No customer-actionable critical events in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "showExportToExcel": true,
+        "crossComponentResources": ["{Workspace}"],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "crit-customer-actionable"
     },
     {
       "type": 3,
