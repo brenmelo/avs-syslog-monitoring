@@ -215,85 +215,88 @@
                 }
               },
               {
-                "name": "sev0Group",
-                "type": "Microsoft.Common.Section",
-                "label": "🔴 Sev 0 — Critical infrastructure (page on-call)",
-                "elements": [
-                  {
-                    "name": "deploySyslogIngestionHeartbeat",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "Syslog Ingestion Heartbeat (no-data alert — monitors the monitoring) — default: ✅",
-                    "defaultValue": true
-                  },
-                  {
-                    "name": "deployHostConnectionLost",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "Host Connection Lost — default: ✅",
-                    "defaultValue": true
-                  },
-                  {
-                    "name": "deployHostShutdown",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "Host Shutdown — default: ✅",
-                    "defaultValue": true
-                  }
-                ]
+                "name": "sev0Header",
+                "type": "Microsoft.Common.TextBlock",
+                "visible": true,
+                "options": {
+                  "text": "🔴 Sev 0 — Critical infrastructure (page on-call)"
+                }
               },
               {
-                "name": "sev1Group",
-                "type": "Microsoft.Common.Section",
-                "label": "🟠 Sev 1 — High priority (notify team)",
-                "elements": [
-                  {
-                    "name": "deployVmDisconnected",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "VM Disconnected — default: ✅",
-                    "defaultValue": true
-                  },
-                  {
-                    "name": "deployVmRemovedFromInventory",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "VM Removed from Inventory — default: ✅",
-                    "defaultValue": true
-                  },
-                  {
-                    "name": "deployDnsFailures",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "DNS Failures (threshold-based; configurable in next step) — default: ✅",
-                    "defaultValue": true
-                  },
-                  {
-                    "name": "deployRolePermissionChanges",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "Role / Permission Changes (Security Audit) — default: ✅",
-                    "defaultValue": true
-                  }
-                ]
+                "name": "deploySyslogIngestionHeartbeat",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Syslog Ingestion Heartbeat (no-data alert — monitors the monitoring) — default: ✅",
+                "defaultValue": true
               },
               {
-                "name": "sev2Group",
-                "type": "Microsoft.Common.Section",
-                "label": "🟡 Sev 2 — Moderate priority (informational)",
-                "elements": [
-                  {
-                    "name": "deployVmGuestReboot",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "VM Guest Reboot — default: ✅",
-                    "defaultValue": true
-                  },
-                  {
-                    "name": "deployDfwSpike",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "Distributed Firewall Blocked Spike (threshold-based; configurable in next step) — default: ✅",
-                    "defaultValue": true
-                  },
-                  {
-                    "name": "deployHostMaintenanceMode",
-                    "type": "Microsoft.Common.CheckBox",
-                    "label": "Host Maintenance Mode — default: ✅",
-                    "defaultValue": true
-                  }
-                ]
+                "name": "deployHostConnectionLost",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Host Connection Lost — default: ✅",
+                "defaultValue": true
+              },
+              {
+                "name": "deployHostShutdown",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Host Shutdown — default: ✅",
+                "defaultValue": true
+              },
+              {
+                "name": "sev1Header",
+                "type": "Microsoft.Common.TextBlock",
+                "visible": true,
+                "options": {
+                  "text": "🟠 Sev 1 — High priority (notify team)"
+                }
+              },
+              {
+                "name": "deployVmDisconnected",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "VM Disconnected — default: ✅",
+                "defaultValue": true
+              },
+              {
+                "name": "deployVmRemovedFromInventory",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "VM Removed from Inventory — default: ✅",
+                "defaultValue": true
+              },
+              {
+                "name": "deployDnsFailures",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "DNS Failures (threshold-based; configurable in next step) — default: ✅",
+                "defaultValue": true
+              },
+              {
+                "name": "deployRolePermissionChanges",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Role / Permission Changes (Security Audit) — default: ✅",
+                "defaultValue": true
+              },
+              {
+                "name": "sev2Header",
+                "type": "Microsoft.Common.TextBlock",
+                "visible": true,
+                "options": {
+                  "text": "🟡 Sev 2 — Moderate priority (informational)"
+                }
+              },
+              {
+                "name": "deployVmGuestReboot",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "VM Guest Reboot — default: ✅",
+                "defaultValue": true
+              },
+              {
+                "name": "deployDfwSpike",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Distributed Firewall Blocked Spike (threshold-based; configurable in next step) — default: ✅",
+                "defaultValue": true
+              },
+              {
+                "name": "deployHostMaintenanceMode",
+                "type": "Microsoft.Common.CheckBox",
+                "label": "Host Maintenance Mode — default: ✅",
+                "defaultValue": true
               }
             ]
           }
@@ -361,16 +364,16 @@
       "deploySev0Alert": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').severitySection.deploySev0Alert)))]",
       "deploySev1Critical": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').severitySection.deploySev1Critical)))]",
       "deploySev2Error": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), false, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').severitySection.deploySev2Error)))]",
-      "deployHostConnectionLost": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.sev0Group.deployHostConnectionLost)))]",
-      "deployHostShutdown": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.sev0Group.deployHostShutdown)))]",
-      "deployVmDisconnected": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.sev1Group.deployVmDisconnected)))]",
-      "deployVmRemovedFromInventory": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.sev1Group.deployVmRemovedFromInventory)))]",
-      "deployVmGuestReboot": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.sev2Group.deployVmGuestReboot)))]",
-      "deployDnsFailures": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.sev1Group.deployDnsFailures)))]",
-      "deployDfwSpike": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.sev2Group.deployDfwSpike)))]",
-      "deployHostMaintenanceMode": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.sev2Group.deployHostMaintenanceMode)))]",
-      "deployRolePermissionChanges": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.sev1Group.deployRolePermissionChanges)))]",
-      "deploySyslogIngestionHeartbeat": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.sev0Group.deploySyslogIngestionHeartbeat)))]"
+      "deployHostConnectionLost": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deployHostConnectionLost)))]",
+      "deployHostShutdown": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deployHostShutdown)))]",
+      "deployVmDisconnected": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmDisconnected)))]",
+      "deployVmRemovedFromInventory": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmRemovedFromInventory)))]",
+      "deployVmGuestReboot": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmGuestReboot)))]",
+      "deployDnsFailures": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployDnsFailures)))]",
+      "deployDfwSpike": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployDfwSpike)))]",
+      "deployHostMaintenanceMode": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployHostMaintenanceMode)))]",
+      "deployRolePermissionChanges": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployRolePermissionChanges)))]",
+      "deploySyslogIngestionHeartbeat": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Recommended'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deploySyslogIngestionHeartbeat)))]"
     }
   }
 }
