@@ -153,7 +153,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where Severity in (\"emerg\", \"emergency\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "query": "AVSSyslog\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\"))\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,

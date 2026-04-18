@@ -383,7 +383,7 @@
     {
       "type": 1,
       "content": {
-        "json": "#### Understanding the emergency event count\n\n**Emergency (Severity 0)** events indicate the system is unusable \u2014 kernel panics, complete storage failures, or host PSOD events. In Azure VMware Solution, **these are managed entirely by Microsoft**. Microsoft\u2019s automated monitoring detects and remediates them. Monitor for visibility and open a [support request](https://portal.azure.com/#create/Microsoft.Support) if they persist.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
+        "json": "#### Understanding the emergency event count\n\n**Emergency (Severity 0)** events indicate the system is unusable \u2014 kernel panics, complete storage failures, or host PSOD events. In Azure VMware Solution, **these are managed entirely by Microsoft**. Microsoft\u2019s automated monitoring detects and remediates them. Monitor for visibility and open a [support request](https://portal.azure.com/#create/Microsoft.Support) if they persist.\n\n**Known severity-mislabeled NSX events (excluded from the Sev0-Emergency alert):**\n\n| AppName | Pattern | Why it's excluded |\n|---|---|---|\n| `NSX` | `Accepts incoming connection from TN <UUID>` | NSX Manager accepting an ESXi transport-node connection \u2014 normal lifecycle event after host reboot, NSX upgrade, or reconnect. NSX-T logs this control-plane event at `local6.emerg` even though it's informational. |\n| `NSX` | `Finishes fullsync with TN <UUID>, mark as connected` | NSX Manager completed initial state sync with a transport node \u2014 this is the **success path** (TN is now healthy). Same severity-labeling issue. |\n\n*Only these two specific success-path messages are excluded. Any other NSX emergency event still alerts.* If you see the same TN UUID reconnecting many times in a short window, investigate as a potential reconnect-storm.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
       },
       "name": "emerg-explanation"
     },
@@ -403,6 +403,22 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "emerg-top-repeated"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\"))\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+        "size": 0,
+        "title": "\ud83d\udd34 Customer-Actionable Emergency Events (NSX TN-connection noise excluded)",
+        "noDataMessage": "\ud83d\udfe2 HEALTHY \u2014 No customer-actionable emergency events in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "showExportToExcel": true,
+        "crossComponentResources": ["{Workspace}"],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "emerg-customer-actionable"
     },
     {
       "type": 3,

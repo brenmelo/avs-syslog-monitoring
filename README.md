@@ -318,8 +318,11 @@ These alerts fire based on the syslog `Severity` field value. VMware may log abb
 ```kql
 AVSSyslog
 | where Severity in ("emerg", "emergency")
+| where not(AppName == "NSX" and (Message has "Accepts incoming connection from TN" or Message has "Finishes fullsync with TN"))
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
+
+> **Note:** Excludes two NSX transport-node connection success-path messages that NSX-T mislabels as `emerg`. See [Known Noisy Events](#-known-noisy-events--exclusion-filters) below.
 
 #### Sev0-Alert
 
@@ -667,6 +670,29 @@ Analysis of real AVS environments shows ~99% of "critical" syslog events come fr
 **If you create alerts manually**, add these filters after the severity filter. If you use the **Deploy to Azure** button, they're already included.
 
 **Workbook visibility:** A dedicated **🟠 Customer-Actionable Critical Events** panel in the workbook applies the same exclusions, giving operators a clear "what to look at" view alongside the full unfiltered critical event grid.
+
+### Excluded patterns (Sev 0 Emergency alert)
+
+NSX-T Manager is known to log certain control-plane lifecycle events with the syslog `local6.emerg` facility/severity even though they are informational. The Sev 0 Emergency alert excludes only **two specific success-path NSX patterns**:
+
+| AppName | Pattern | What it is |
+|---|---|---|
+| `NSX` | `Accepts incoming connection from TN <UUID>` | NSX Manager accepting an ESXi transport-node (TN) connection. Normal lifecycle event after host reboot, NSX upgrade, or reconnect. |
+| `NSX` | `Finishes fullsync with TN <UUID>, mark as connected` | NSX Manager completed initial state sync with a transport node. This is the **success path** — the TN is now healthy. |
+
+**Why it's safe to exclude:**
+- The NSX Manager appliances (`TNTxxx-NSX-APPxx` hostnames) are **Microsoft-managed** under the AVS shared responsibility model — customers cannot tune their syslog severity.
+- The message text describes routine connection acceptance and *successful* fullsync completion — by definition, the opposite of "system unusable."
+- **Narrow exclusion:** only these two exact success-path messages are filtered. **Any other NSX `emerg` event still alerts**, so real NSX control-plane failures (auth errors, cluster-split, certificate issues, etc.) will still page you.
+
+**Watch out for:** if you see the same TN UUID reconnecting **many times in a short window** (e.g., dozens per hour), that's a potential reconnect-storm worth investigating. The workbook's **Top Repeated Emergency Messages** panel makes this visible — it will surface a high count for the same UUID even though individual events don't alert.
+
+**Exclusion filter used in the Sev0-Emergency alert rule:**
+```kql
+| where not(AppName == "NSX" and (Message has "Accepts incoming connection from TN" or Message has "Finishes fullsync with TN"))
+```
+
+**Workbook visibility:** A dedicated **🔴 Customer-Actionable Emergency Events** panel applies the same exclusion alongside the unfiltered emergency event grid.
 
 ### Adding Custom Exclusions
 
