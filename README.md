@@ -19,7 +19,24 @@ Pre-built Azure Monitor **Workbook** (~40 panels) and **14 syslog alert rules** 
 
 ---
 
-## Prerequisites
+## 📑 Table of Contents
+
+1. [Prerequisites](#-prerequisites)
+2. [Deploy the Workbook](#1-deploy-the-workbook)
+3. [Deploy the AVS Syslog Alert Rules](#2-deploy-the-avs-syslog-alert-rules)
+4. [Deploy Azure Service Health Alerts](#3-deploy-azure-service-health-alerts-recommended)
+5. [Alert Rules Reference](#-alert-rules-reference)
+6. [Action Group Routing](#-action-group-routing)
+7. [Alert Naming Convention](#-alert-naming-convention)
+8. [Repository Files](#-repository-files)
+9. [Deployment Parameters — Alert Template](#-deployment-parameters--alert-template)
+10. [Known Noisy Events & Exclusion Filters](#-known-noisy-events--exclusion-filters)
+11. [Exploration Queries](#-exploration-queries)
+12. [References](#-references)
+
+---
+
+## 📋 Prerequisites
 
 | Requirement | Details |
 |---|---|
@@ -48,7 +65,7 @@ AVSSyslog
 
 ---
 
-## 1. Deploy the Workbook
+## 📊 1. Deploy the Workbook
 
 The workbook gives you real-time dashboards for severity distribution, event-specific monitoring, host health, and pipeline status — start here.
 
@@ -94,7 +111,7 @@ Once deployed, the workbook includes:
 
 ---
 
-## 2. Deploy the AVS Syslog Alert Rules
+## 🚨 2. Deploy the AVS Syslog Alert Rules
 
 ### Before You Begin — Create an Action Group
 
@@ -177,7 +194,7 @@ Repeat for each alert you want. The full KQL queries are listed below.
 
 ---
 
-## 3. Deploy Azure Service Health Alerts (recommended)
+## 🏥 3. Deploy Azure Service Health Alerts (recommended)
 
 Syslog alerts monitor what's happening **inside** your AVS environment. Azure Service Health alerts monitor what **Microsoft is doing** — service outages, planned maintenance (ESXi/vCenter/NSX upgrades), health advisories, and security advisories (VMSAs, CVEs). Both are needed for complete monitoring.
 
@@ -234,7 +251,7 @@ az monitor activity-log alert create \
 
 ---
 
-## Alert Rules Reference
+## 📚 Alert Rules Reference
 
 ### Evaluation Window & Frequency
 
@@ -547,7 +564,7 @@ AVSSyslog
 
 ---
 
-## Action Group Routing
+## 🔔 Action Group Routing
 
 Alerts are grouped into three severity tiers. Assign a different action group per tier, or use the same group for all.
 
@@ -559,7 +576,7 @@ Alerts are grouped into three severity tiers. Assign a different action group pe
 
 ---
 
-## Alert Naming Convention
+## 🏷️ Alert Naming Convention
 
 All alert rule names follow: `{Prefix}-{Category}-{Name}`
 
@@ -575,7 +592,7 @@ With the default prefix `AVS`:
 
 ---
 
-## Repository Files
+## 📁 Repository Files
 
 | File | Description |
 |---|---|
@@ -588,7 +605,7 @@ With the default prefix `AVS`:
 
 ---
 
-## Deployment Parameters — Alert Template
+## ⚙️ Deployment Parameters — Alert Template
 
 | Parameter | Type | Default | Description |
 |---|---|---|---|
@@ -617,7 +634,7 @@ With the default prefix `AVS`:
 
 ---
 
-## Known Noisy Events & Exclusion Filters
+## 🔇 Known Noisy Events & Exclusion Filters
 
 VMware platform components can generate large volumes of severity `critical` and `error` events that are **infrastructure-level diagnostic messages managed by Microsoft** — not customer-actionable problems. The workbook displays all events for full visibility with grouping panels, but the **alert rules exclude known noisy patterns** to prevent alert fatigue.
 
@@ -658,7 +675,7 @@ AVSSyslog
 
 ---
 
-## Exploration Queries
+## 🔍 Exploration Queries
 
 Run these in your Log Analytics workspace to validate data before enabling alerts.
 
@@ -695,7 +712,7 @@ AVSSyslog
 
 ---
 
-## References
+## 📖 References
 
 - [Microsoft — Queries for the AVSSyslog table](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/queries/avssyslog)
 - [AVSSyslog table schema](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/avssyslog)
