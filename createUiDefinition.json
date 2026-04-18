@@ -64,8 +64,8 @@
             "type": "Microsoft.Common.InfoBox",
             "options": {
               "icon": "None",
-              "text": "Don't have an action group yet? Open the action group creation wizard in a new tab, finish it, then come back here and refresh the dropdowns.",
-              "uri": "https://portal.azure.com/#create/Microsoft.ActionGroup",
+              "text": "Don't have an action group yet? Follow the official guide to create one (opens in a new tab), then come back to this wizard and refresh the dropdowns.",
+              "uri": "https://learn.microsoft.com/azure/azure-monitor/alerts/action-groups#create-an-action-group-in-the-azure-portal",
               "style": "Upsell"
             }
           },
