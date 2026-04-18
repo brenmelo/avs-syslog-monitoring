@@ -175,7 +175,31 @@
             "options": {
               "icon": "Info",
               "style": "Info",
-              "text": "Recommended (12 of 14 alerts) — Sev 0: Emergency, Alert, Host Connection Lost, Host Shutdown, Syslog Ingestion Heartbeat. Sev 1: Critical, VM Disconnected, VM Removed from Inventory, DNS Failures, Role/Permission Changes. Sev 2: Host Maintenance Mode, VM Guest Reboot, DFW Blocked Spike. Excludes (off by default): Sev 2 Error (high volume), and you can still toggle individual alerts using Custom."
+              "text": "Recommended preset — 12 of 14 alerts enabled (curated for production). Sev 2 Error is OFF by default (high-volume — enable only after tuning). See breakdown below."
+            }
+          },
+          {
+            "name": "previewRecommendedSev0",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'Recommended')]",
+            "options": {
+              "text": "🔴 Sev 0 — Critical (5):  ✅ Emergency  •  ✅ Alert  •  ✅ Host Connection Lost  •  ✅ Host Shutdown  •  ✅ Syslog Ingestion Heartbeat"
+            }
+          },
+          {
+            "name": "previewRecommendedSev1",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'Recommended')]",
+            "options": {
+              "text": "🟠 Sev 1 — High (5):  ✅ Critical  •  ✅ VM Disconnected  •  ✅ VM Removed from Inventory  •  ✅ DNS Failures  •  ✅ Role / Permission Changes"
+            }
+          },
+          {
+            "name": "previewRecommendedSev2",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'Recommended')]",
+            "options": {
+              "text": "🟡 Sev 2 — Moderate (3 of 4):  ✅ Host Maintenance Mode  •  ✅ VM Guest Reboot  •  ✅ DFW Blocked Spike  •  ❌ Sev 2 Error (off — switch to Custom or All to enable)"
             }
           },
           {
@@ -185,7 +209,31 @@
             "options": {
               "icon": "Warning",
               "style": "Warning",
-              "text": "All Enabled (14 of 14 alerts) — Everything in Recommended PLUS Sev 2 Error (err/error events from any AppName). Use only if you have tuned thresholds and exclusions for your environment, or you risk a noisy on-call rotation."
+              "text": "All Enabled preset — 14 of 14 alerts enabled (full coverage). Includes Sev 2 Error which can be noisy without tuned thresholds and exclusions."
+            }
+          },
+          {
+            "name": "previewAllSev0",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'All')]",
+            "options": {
+              "text": "🔴 Sev 0 — Critical (5):  ✅ Emergency  •  ✅ Alert  •  ✅ Host Connection Lost  •  ✅ Host Shutdown  •  ✅ Syslog Ingestion Heartbeat"
+            }
+          },
+          {
+            "name": "previewAllSev1",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'All')]",
+            "options": {
+              "text": "🟠 Sev 1 — High (5):  ✅ Critical  •  ✅ VM Disconnected  •  ✅ VM Removed from Inventory  •  ✅ DNS Failures  •  ✅ Role / Permission Changes"
+            }
+          },
+          {
+            "name": "previewAllSev2",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'All')]",
+            "options": {
+              "text": "🟡 Sev 2 — Moderate (4):  ✅ Sev 2 Error  •  ✅ Host Maintenance Mode  •  ✅ VM Guest Reboot  •  ✅ DFW Blocked Spike"
             }
           },
           {
@@ -195,7 +243,31 @@
             "options": {
               "icon": "Info",
               "style": "Info",
-              "text": "Minimal (5 of 14 alerts) — Sev 0 only: Emergency, Alert, Host Connection Lost, Host Shutdown, Syslog Ingestion Heartbeat. Use this for production pilots, or to prove out the routing/action-group setup before turning on Sev 1 and Sev 2."
+              "text": "Minimal preset — 5 of 14 alerts enabled. Sev 0 only: ideal for pilots or for proving out routing and action-group setup before enabling Sev 1 / Sev 2."
+            }
+          },
+          {
+            "name": "previewMinimalSev0",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'Minimal')]",
+            "options": {
+              "text": "🔴 Sev 0 — Critical (5):  ✅ Emergency  •  ✅ Alert  •  ✅ Host Connection Lost  •  ✅ Host Shutdown  •  ✅ Syslog Ingestion Heartbeat"
+            }
+          },
+          {
+            "name": "previewMinimalSev1",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'Minimal')]",
+            "options": {
+              "text": "🟠 Sev 1 — High (0):  ❌ Critical  •  ❌ VM Disconnected  •  ❌ VM Removed from Inventory  •  ❌ DNS Failures  •  ❌ Role / Permission Changes"
+            }
+          },
+          {
+            "name": "previewMinimalSev2",
+            "type": "Microsoft.Common.TextBlock",
+            "visible": "[equals(steps('alertSelection').alertPreset, 'Minimal')]",
+            "options": {
+              "text": "🟡 Sev 2 — Moderate (0):  ❌ Sev 2 Error  •  ❌ Host Maintenance Mode  •  ❌ VM Guest Reboot  •  ❌ DFW Blocked Spike"
             }
           },
           {
@@ -205,7 +277,7 @@
             "options": {
               "icon": "Info",
               "style": "Info",
-              "text": "Custom — Pick individual alerts below. Defaults shown next to each checkbox match the Recommended preset."
+              "text": "Custom — Pick individual alerts below. The default checkbox values match the Recommended preset; toggle any to fine-tune."
             }
           },
           {
