@@ -29,12 +29,13 @@ Pre-built Azure Monitor **Workbook** (~40 panels) and **14 syslog alert rules** 
 4. [Deploy Azure Service Health Alerts](#3-deploy-azure-service-health-alerts-recommended)
 5. [Alert Rules Reference](#-alert-rules-reference)
 6. [Action Group Routing](#-action-group-routing)
-7. [Alert Naming Convention](#-alert-naming-convention)
-8. [Repository Files](#-repository-files)
-9. [Deployment Parameters — Alert Template](#-deployment-parameters--alert-template)
-10. [Known Noisy Events & Exclusion Filters](#-known-noisy-events--exclusion-filters)
-11. [Exploration Queries](#-exploration-queries)
-12. [References](#-references)
+7. [Threshold Tuning Guide](#-threshold-tuning-guide)
+8. [Alert Naming Convention](#-alert-naming-convention)
+9. [Repository Files](#-repository-files)
+10. [Deployment Parameters — Alert Template](#-deployment-parameters--alert-template)
+11. [Known Noisy Events & Exclusion Filters](#-known-noisy-events--exclusion-filters)
+12. [Exploration Queries](#-exploration-queries)
+13. [References](#-references)
 
 ---
 
@@ -583,7 +584,46 @@ Alerts are grouped into three severity tiers. Assign a different action group pe
 
 ---
 
-## 🏷️ Alert Naming Convention
+## �️ Threshold Tuning Guide
+
+Only **3 of the 14 alerts** use thresholds — they are **volume-based** because individual events are normal but a *spike* indicates a problem. The other 11 alerts fire on first occurrence (severity-based or discrete events like host shutdowns) and don't need a threshold.
+
+### Why only these 3?
+
+| Alert | Why it has a threshold |
+|---|---|
+| **Sev2-Error** | Single errors are common (transient hostd retries, brief network blips). Sustained errors from the same `HostName + AppName` combination indicate a real problem. |
+| **DNS Failures** | A single failed DNS query is normal (typo, scanner, expired cache). Many failures from one host = real DNS server issue. |
+| **DFW Blocked Spike** | The firewall blocking traffic *is its job*. A sudden surge above baseline = potential attack, scanning, or misconfigured app. |
+
+All other alerts use threshold **= 0** (any occurrence fires) because the event itself is the signal: a host going down, a VM being removed, a permission change — these warrant immediate investigation.
+
+### Recommended baselines
+
+| Threshold | Default | Lower it (more sensitive) | Raise it (less noisy) |
+|---|---:|---|---|
+| **Error events / 15 min** | `5` | `2–3` for very stable environments where any error matters | `10–20` if you have a chatty AppName generating frequent transient errors |
+| **DNS failures / 15 min** | `10` | `5` for early warning of DNS server issues | `25–50` if your VMs frequently query non-existent records (security scanners, misconfigured apps, internal CDN lookups) |
+| **DFW blocks / 15 min** | `50` | `20` for security-sensitive workloads where any spike matters | `100–200` for high-traffic clusters or environments with deny-by-default policies |
+
+### Tuning workflow
+
+1. **Deploy with defaults.** Let the alerts run for 1–2 weeks.
+2. **Check Azure Monitor → Alerts** for false-positive rate. Use the workbook's **Top Repeated Error Messages** panel to see which `AppName` is dominant.
+3. **Adjust per environment**:
+   - If a single AppName is generating noise → raise the Error threshold (or add an exclusion filter for that AppName, see [Known Noisy Events](#-known-noisy-events--exclusion-filters))
+   - If alerts are too quiet during real incidents → lower the threshold
+4. **Re-run the deployment** with the new threshold value, or edit the alert rule directly in **Monitor → Alerts → Alert rules → Edit**.
+
+> **Tip:** For ad-hoc spike detection (e.g., during incident response), raise thresholds temporarily rather than disabling alerts — that way you keep the signal during the *next* incident.
+
+### What about adding more thresholds?
+
+The other 11 alerts intentionally don't have thresholds. Adding one to (e.g.) Host-Shutdown would be wrong — you want to know about every host shutdown, not "more than 3 in 15 minutes." The right tool for suppressing alerts during planned events (patch nights, upgrades) is **Azure Monitor [alert processing rules](https://learn.microsoft.com/en-us/azure/azure-monitor/alerts/alerts-action-rules)** with a maintenance window, not a threshold change.
+
+---
+
+## �🏷️ Alert Naming Convention
 
 All alert rule names follow: `{Prefix}-{Category}-{Name}`
 

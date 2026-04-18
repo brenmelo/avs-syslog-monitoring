@@ -307,7 +307,7 @@
             "name": "infoBox",
             "type": "Microsoft.Common.InfoBox",
             "options": {
-              "text": "Set alert thresholds for volume-based alerts. These thresholds apply per host per 15-minute evaluation window.",
+              "text": "These three alerts are volume-based — individual events are normal, but a spike indicates a problem. All other alerts in this solution fire on first occurrence (severity-based or discrete events like host shutdowns) and don't need a threshold. Thresholds apply per host per 15-minute evaluation window. See the README threshold-tuning guide for help adjusting these values.",
               "style": "Info"
             }
           },
@@ -320,7 +320,7 @@
             "min": 1,
             "max": 100,
             "showStepMarkers": false,
-            "toolTip": "Number of err/error events per HostName + AppName in 15 minutes before alerting."
+            "toolTip": "Number of err/error events per HostName + AppName in 15 minutes before alerting. Recommended baseline: 5 (default). Raise to 10–20 if you see frequent transient errors from a single AppName. Lower to 2–3 only for very stable environments."
           },
           {
             "name": "dnsFailureThresholdPer15m",
@@ -331,7 +331,7 @@
             "min": 1,
             "max": 200,
             "showStepMarkers": false,
-            "toolTip": "Number of DNS failures per host in 15 minutes before alerting."
+            "toolTip": "Number of DNS failures per host in 15 minutes before alerting. Recommended baseline: 10 (default). Raise to 25–50 if your VMs frequently query non-existent records (e.g., scanning, misconfigured apps). Lower to 5 if you want early warning of DNS server issues."
           },
           {
             "name": "dfwSpikeThresholdPer15m",
@@ -342,7 +342,7 @@
             "min": 1,
             "max": 500,
             "showStepMarkers": false,
-            "toolTip": "Number of blocked firewall events per host in 15 minutes before alerting."
+            "toolTip": "Number of blocked firewall events per host in 15 minutes before alerting. Recommended baseline: 50 (default). Raise to 100–200 for high-traffic clusters or environments with deny-by-default policies. Lower to 20 for security-sensitive workloads where any spike matters."
           }
         ]
       }
