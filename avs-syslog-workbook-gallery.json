@@ -588,6 +588,13 @@
       "name": "crit-top-repeated"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "**What counts as a customer-actionable Critical event?**\n\nMost `crit`/`critical` entries on a healthy AVS cluster come from internal vSAN and etcd housekeeping that Microsoft owns. **This panel filters those out** so only events you can act on remain. Excluded sources:\n\n| Excluded source | Why | Owner |\n|---|---|---|\n| `vsand` + `CalculateHostStats` | vSAN daemon collecting per-host capacity stats — runs continuously | Microsoft |\n| `clomd` / `clomd-whatif` | vSAN Cluster-Level Object Manager: object placement and \"what-if\" planning chatter | Microsoft |\n| `etcd` + `failed to purge snap file ... device or resource busy` | etcd snapshot-cleanup retry — self-resolves | Microsoft |\n\nReal customer-actionable Critical events typically look like:\n\n| AppName | Example Message | What it usually means |\n|---|---|---|\n| `hostd` | `Failed to power on VM` / `VM disk consolidation needed` / `failed to load VM` | VM lifecycle failure on a specific host — investigate the VM |\n| `vmkernel` | `vmw_psp_rr: Could not select path for device` / `H:0x0 D:0x2 P:0x0` SCSI sense errors | Storage path or LUN-level error — open Azure support ticket |\n| `vpxd` / `vpxa` | `Cannot communicate with host` / `Lost master agent connection` | vCenter ↔ ESXi management-plane disruption |\n| `nsx-syslog` / `nsx-edge` | `BGP peer down` / `IPSec tunnel state DOWN` / `routing daemon crashed` | NSX data-plane issue affecting your workloads |\n| `dnsmasq` / `dhclient` | repeated `NXDOMAIN` / `no DHCPOFFERS received` | Customer-side DNS or DHCP misconfiguration |\n\nIf this panel is empty (🟢 HEALTHY) you have **no actionable critical events** in the selected time range — even if the unfiltered Severity tile above shows a non-zero count from platform housekeeping."
+      },
+      "name": "crit-customer-actionable-info"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
