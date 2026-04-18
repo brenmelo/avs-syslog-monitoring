@@ -54,14 +54,42 @@
             "name": "infoBox",
             "type": "Microsoft.Common.InfoBox",
             "options": {
-              "text": "Select the action groups that will be notified when alerts fire. You can use the same group for all severities or separate groups. If you don't have one yet, create an Action Group first (Monitor → Action Groups). Leave a dropdown empty to skip that severity tier.",
+              "icon": "Info",
+              "text": "Select the action groups to notify when alerts fire. You can use one group for all severities or separate groups per tier. Leave a dropdown empty to disable notifications for that tier — alerts will still fire and be visible in Azure Monitor, just without paging anyone.",
               "style": "Info"
             }
           },
           {
+            "name": "createNewBox",
+            "type": "Microsoft.Common.InfoBox",
+            "options": {
+              "icon": "None",
+              "text": "Don't have an action group yet? Create one in the Azure portal first, then return to this wizard.",
+              "uri": "https://portal.azure.com/#blade/HubsExtension/BrowseResource/resourceType/Microsoft.Insights%2FactionGroups",
+              "style": "Upsell"
+            }
+          },
+          {
+            "name": "strategyBox",
+            "type": "Microsoft.Common.InfoBox",
+            "options": {
+              "icon": "None",
+              "text": "Need help choosing a notification strategy? See the action group strategy guide (Email, SMS, Teams, Webhook, ITSM, Logic App, etc.) in the README.",
+              "uri": "https://github.com/brenmelo/avs-syslog-monitoring#-action-group-routing",
+              "style": "Info"
+            }
+          },
+          {
+            "name": "useSameForAll",
+            "type": "Microsoft.Common.CheckBox",
+            "label": "Use the same action group for all severities (simple setup)",
+            "defaultValue": false,
+            "toolTip": "If checked, the Severity 0 selection below will be reused for Sev 1 and Sev 2, and the other dropdowns will be hidden."
+          },
+          {
             "name": "actionGroupSev0",
             "type": "Microsoft.Solutions.ResourceSelector",
-            "label": "Action Group — Severity 0 (Emergency, Alert, Host-down, Heartbeat)",
+            "label": "🔴 Action Group — Severity 0 (Emergency, Alert, Host-down, Heartbeat)",
             "toolTip": "Notified for the most critical alerts. Leave empty to skip.",
             "resourceType": "Microsoft.Insights/actionGroups",
             "options": {
@@ -74,9 +102,10 @@
           {
             "name": "actionGroupSev1",
             "type": "Microsoft.Solutions.ResourceSelector",
-            "label": "Action Group — Severity 1 (Critical, VM, DNS, Role changes)",
+            "label": "🟠 Action Group — Severity 1 (Critical, VM, DNS, Role changes)",
             "toolTip": "Notified for high-priority alerts. Leave empty to skip.",
             "resourceType": "Microsoft.Insights/actionGroups",
+            "visible": "[not(steps('notifications').useSameForAll)]",
             "options": {
               "filter": {
                 "subscription": "onBasics",
@@ -87,14 +116,25 @@
           {
             "name": "actionGroupSev2",
             "type": "Microsoft.Solutions.ResourceSelector",
-            "label": "Action Group — Severity 2 (Error, DFW, Maintenance, Guest Reboot)",
+            "label": "🟡 Action Group — Severity 2 (Error, DFW, Maintenance, Guest Reboot)",
             "toolTip": "Notified for moderate-priority alerts. Leave empty to skip.",
             "resourceType": "Microsoft.Insights/actionGroups",
+            "visible": "[not(steps('notifications').useSameForAll)]",
             "options": {
               "filter": {
                 "subscription": "onBasics",
                 "location": "all"
               }
+            }
+          },
+          {
+            "name": "noGroupWarning",
+            "type": "Microsoft.Common.InfoBox",
+            "visible": "[and(empty(steps('notifications').actionGroupSev0.id), empty(steps('notifications').actionGroupSev1.id), empty(steps('notifications').actionGroupSev2.id))]",
+            "options": {
+              "icon": "Warning",
+              "text": "⚠️ No action groups selected. Alert rules will still be deployed and visible in Azure Monitor, but nobody will be notified when they fire. Select at least one action group above for notifications to be sent.",
+              "style": "Warning"
             }
           }
         ]
@@ -264,8 +304,8 @@
       "workspaceResourceId": "[basics('workspaceSelector').id]",
       "alertNamePrefix": "[basics('alertNamePrefix')]",
       "actionGroupIdSev0": "[if(empty(steps('notifications').actionGroupSev0.id), '', steps('notifications').actionGroupSev0.id)]",
-      "actionGroupIdSev1": "[if(empty(steps('notifications').actionGroupSev1.id), '', steps('notifications').actionGroupSev1.id)]",
-      "actionGroupIdSev2": "[if(empty(steps('notifications').actionGroupSev2.id), '', steps('notifications').actionGroupSev2.id)]",
+      "actionGroupIdSev1": "[if(steps('notifications').useSameForAll, if(empty(steps('notifications').actionGroupSev0.id), '', steps('notifications').actionGroupSev0.id), if(empty(steps('notifications').actionGroupSev1.id), '', steps('notifications').actionGroupSev1.id))]",
+      "actionGroupIdSev2": "[if(steps('notifications').useSameForAll, if(empty(steps('notifications').actionGroupSev0.id), '', steps('notifications').actionGroupSev0.id), if(empty(steps('notifications').actionGroupSev2.id), '', steps('notifications').actionGroupSev2.id))]",
       "errThresholdPer15m": "[steps('thresholds').errThresholdPer15m]",
       "dnsFailureThresholdPer15m": "[steps('thresholds').dnsFailureThresholdPer15m]",
       "dfwSpikeThresholdPer15m": "[steps('thresholds').dfwSpikeThresholdPer15m]",
