@@ -369,7 +369,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where Message has \"vmdisconnectedevent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "query": "AVSSyslog\n| where Message has \"vmdisconnectedevent\"\n| where not(Message has \"com.vmware.vsan.health\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,
@@ -405,7 +405,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where Message has \"vmremovedevent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "query": "AVSSyslog\n| where Message has \"vmremovedevent\"\n| where not(Message has \"com.vmware.vsan.health\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,

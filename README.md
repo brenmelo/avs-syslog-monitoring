@@ -736,6 +736,27 @@ NSX-T Manager is known to log certain control-plane lifecycle events with the sy
 
 **Workbook visibility:** A dedicated **🔴 Customer-Actionable Emergency Events** panel applies the same exclusion alongside the unfiltered emergency event grid.
 
+### Excluded pattern (Sev 1 VM Removed from Inventory & VM Disconnected alerts)
+
+vSAN periodically creates short-lived test VMs to validate datastore health, then removes them. Each create/remove pair generates a `vim.event.VmRemovedEvent` (and sometimes `VmDisconnectedEvent`) tagged `[com.vmware.vsan.health]`. On a healthy cluster this can produce **hundreds of events per day** — none of them represent real workload changes.
+
+| AppName | Pattern | What it is |
+|---|---|---|
+| `vpxd` | `vim.event.VmRemovedEvent` carrying `[com.vmware.vsan.health]` | vSAN health-check test VM being torn down |
+| `vpxd` | `vim.event.VmDisconnectedEvent` carrying `[com.vmware.vsan.health]` | vSAN health-check test VM disconnect |
+
+**Why it's safe to exclude:**
+- The events come from Microsoft-managed vSAN health-check infrastructure and don't represent customer workload activity.
+- Real customer VM removals or disconnects do **not** carry the `com.vmware.vsan.health` tag — they reference the actual workload VM and a user/admin in the event payload.
+- **Narrow exclusion:** only events tagged `com.vmware.vsan.health` are filtered. Any other `VmRemovedEvent`/`VmDisconnectedEvent` still alerts.
+
+**Exclusion filter used in both alert rules:**
+```kql
+| where not(Message has "com.vmware.vsan.health")
+```
+
+**Workbook visibility:** The **Top Repeated VM Events** panel groups VM events by source (`vSAN health-check (noise)` vs `Customer / vCenter`) so you can see at a glance whether a high count is real activity.
+
 ### Adding Custom Exclusions
 
 If your environment has other noisy patterns, you can add exclusions after deployment by editing the alert rule in **Monitor → Alerts → Alert rules → Edit**. Add additional `where not(...)` clauses:
