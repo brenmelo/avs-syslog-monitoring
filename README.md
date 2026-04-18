@@ -94,7 +94,7 @@ Once deployed, the workbook includes:
 
 ---
 
-## 2. Deploy the Alert Rules
+## 2. Deploy the AVS Syslog Alert Rules
 
 ### Before You Begin — Create an Action Group
 
