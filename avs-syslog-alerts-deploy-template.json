@@ -261,7 +261,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "[concat('AVSSyslog\n| where Severity in (\"err\", \"error\")\n| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, 15m)\n| where ErrorCount > ', string(parameters(''errThresholdPer15m'')))]",
+              "query": "[concat('AVSSyslog\n| where Severity in (\"err\", \"error\")\n| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, 15m)\n| where ErrorCount > ', string(parameters('errThresholdPer15m')))]",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,
@@ -477,7 +477,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "[concat('AVSSyslog\n| where AppName == \"dnsmasq\"\n| where Message has \"Failed DNS Query\"\n| summarize FailureCount = count() by HostName, bin(TimeGenerated, 15m)\n| where FailureCount > ', string(parameters(''dnsFailureThresholdPer15m'')))]",
+              "query": "[concat('AVSSyslog\n| where AppName == \"dnsmasq\"\n| where Message has \"Failed DNS Query\"\n| summarize FailureCount = count() by HostName, bin(TimeGenerated, 15m)\n| where FailureCount > ', string(parameters('dnsFailureThresholdPer15m')))]",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,
@@ -513,7 +513,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "[concat('AVSSyslog\n| where AppName == \"FIREWALL\" or ProcId == \"FIREWALL\"\n| where Message has_any (\"DROP\", \"REJECT\", \"denied\")\n| summarize BlockedCount = count() by HostName, bin(TimeGenerated, 15m)\n| where BlockedCount > ', string(parameters(''dfwSpikeThresholdPer15m'')))]",
+              "query": "[concat('AVSSyslog\n| where AppName == \"FIREWALL\" or ProcId == \"FIREWALL\"\n| where Message has_any (\"DROP\", \"REJECT\", \"denied\")\n| summarize BlockedCount = count() by HostName, bin(TimeGenerated, 15m)\n| where BlockedCount > ', string(parameters('dfwSpikeThresholdPer15m')))]",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,
