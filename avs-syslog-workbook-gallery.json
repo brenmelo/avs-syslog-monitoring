@@ -145,7 +145,7 @@
     {
       "type": 1,
       "content": {
-"json": "---\n## Overview \u2014 Severity Distribution\n\nSyslog uses eight standard severity levels ([RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1)). This dashboard highlights **Severity 0\u20133** as high-impact events:\n\n| Level | Keyword | Meaning | Examples |\n|---|---|---|---|\n| **0** | `emerg` / `emergency` | System is unusable (per RFC 5424). **In AVS this stream is dominated by NSX TN-handshake noise** — use the Customer-Actionable Emergency panel for real signal. | Kernel panic, complete storage failure, host PSOD |\n| **1** | `alert` | Immediate action required | Hardware failure requiring replacement, HA failover triggered |\n| **2** | `crit` / `critical` | Critical condition | vSAN object inaccessible, disk group decommissioned, ESXi host disconnected |\n| **3** | `err` / `error` | Error condition | SOAP timeouts, NTP sync failures, snapshot consolidation errors |\n| 4 | `warn` / `warning` | Warning \u2014 developing issue | High memory/CPU usage, certificate expiration approaching |\n| 5 | `notice` | Normal but noteworthy | User login events, configuration changes, VM power state changes |\n| 6 | `info` | Informational | Routine heartbeats, backup completion, scheduled tasks |\n| 7 | `debug` | Debug-level detail | Verbose API tracing, internal state dumps |\n\n> **Shared Responsibility:** In Azure VMware Solution, Microsoft manages the underlying infrastructure (ESXi hosts, vSAN, NSX, vCenter). Events from platform components like `vsand`, `hostd`, `vpxd`, and `nsx-syslog` are **Microsoft\u2019s responsibility**. Customers are responsible for workload VM events. See [Azure VMware Solution management](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)."
+        "json": "---\n## Overview — Severity Distribution\n\nSyslog uses eight standard severity levels ([RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1)). This dashboard highlights **Severity 0–3** as high-impact events:\n\n| Level | Keyword | Meaning | Examples |\n|---|---|---|---|\n| **0** | `emerg` / `emergency` | System is unusable (per RFC 5424). **In AVS this stream is dominated by NSX TN-handshake noise** — use the Customer-Actionable Emergency panel for real signal. | Kernel panic, complete storage failure, host PSOD |\n| **1** | `alert` | Immediate action required | Hardware failure requiring replacement, HA failover triggered |\n| **2** | `crit` / `critical` | Critical condition | vSAN object inaccessible, disk group decommissioned, ESXi host disconnected |\n| **3** | `err` / `error` | Error condition | SOAP timeouts, NTP sync failures, snapshot consolidation errors |\n| 4 | `warn` / `warning` | Warning — developing issue | High memory/CPU usage, certificate expiration approaching |\n| 5 | `notice` | Normal but noteworthy | User login events, configuration changes, VM power state changes |\n| 6 | `info` | Informational | Routine heartbeats, backup completion, scheduled tasks |\n| 7 | `debug` | Debug-level detail | Verbose API tracing, internal state dumps |\n\n> **Shared Responsibility:** In Azure VMware Solution, Microsoft manages the underlying infrastructure (ESXi hosts, vSAN, NSX, vCenter). Events from platform components like `vsand`, `hostd`, `vpxd`, and `nsx-syslog` are **Microsoft’s responsibility**. Customers are responsible for workload VM events. See [Azure VMware Solution management](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)."
       },
       "name": "section-overview"
     },
@@ -410,7 +410,7 @@
     {
       "type": 1,
       "content": {
-        "json": "#### Understanding the emergency event count\n\nIn the standard syslog spec ([RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1)) **Severity 0 (`emerg`)** literally means *\"system is unusable\"* \u2014 kernel panics, complete storage failures, host PSOD. **In Azure VMware Solution, the raw `emerg` stream rarely matches that definition** because NSX-T Manager logs routine control-plane lifecycle events (TN connection handshake, fullsync completion) at `local6.emerg` even though they're informational and Microsoft-managed.\n\nThat's why this dashboard pairs the **raw Severity 0 grid** (above) with a **Customer-Actionable Emergency Events** panel (below) that filters out the known noise. Use the customer-actionable panel as your real \"is anything wrong?\" view; use the raw grid only when investigating a specific incident.\n\n**Known severity-mislabeled NSX events (excluded from the Sev0-Emergency alert):**\n\n| AppName | Pattern | Why it's excluded |\n|---|---|---|\n| `NSX` | `Accepts incoming connection from TN <UUID>` | NSX Manager accepting an ESXi transport-node connection \u2014 normal lifecycle event after host reboot, NSX upgrade, or reconnect. NSX-T logs this control-plane event at `local6.emerg` even though it's informational. |\n| `NSX` | `Finishes fullsync with TN <UUID>, mark as connected` | NSX Manager completed initial state sync with a transport node \u2014 this is the **success path** (TN is now healthy). Same severity-labeling issue. |\n\n*Only these two specific success-path messages are excluded. Any other NSX emergency event still alerts.* If you see the same TN UUID reconnecting many times in a short window, investigate as a potential reconnect-storm.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
+        "json": "#### Understanding the emergency event count\n\nIn the standard syslog spec ([RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1)) **Severity 0 (`emerg`)** literally means *\"system is unusable\"* — kernel panics, complete storage failures, host PSOD. **In Azure VMware Solution, the raw `emerg` stream rarely matches that definition** because NSX-T Manager logs routine control-plane lifecycle events (TN connection handshake, fullsync completion) at `local6.emerg` even though they're informational and Microsoft-managed.\n\nThat's why this dashboard pairs the **raw Severity 0 grid** (above) with a **Customer-Actionable Emergency Events** panel (below) that filters out the known noise. Use the customer-actionable panel as your real \"is anything wrong?\" view; use the raw grid only when investigating a specific incident.\n\n**Known severity-mislabeled NSX events (excluded from the Sev0-Emergency alert):**\n\n| AppName | Pattern | Why it's excluded |\n|---|---|---|\n| `NSX` | `Accepts incoming connection from TN <UUID>` | NSX Manager accepting an ESXi transport-node connection — normal lifecycle event after host reboot, NSX upgrade, or reconnect. NSX-T logs this control-plane event at `local6.emerg` even though it's informational. |\n| `NSX` | `Finishes fullsync with TN <UUID>, mark as connected` | NSX Manager completed initial state sync with a transport node — this is the **success path** (TN is now healthy). Same severity-labeling issue. |\n\n*Only these two specific success-path messages are excluded. Any other NSX emergency event still alerts.* If you see the same TN UUID reconnecting many times in a short window, investigate as a potential reconnect-storm.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
       },
       "name": "emerg-explanation"
     },
@@ -421,12 +421,24 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| extend NormalizedMessage = replace_regex(Message, @\"^\\d{4}-\\d{2}-\\d{2}T[^\\s]+\\s+\\S+\\s+\", \"\")\n| extend NormalizedMessage = replace_regex(NormalizedMessage, @\"opID=\\S+\", \"opID=<OPID>\")\n| extend Template = replace_regex(NormalizedMessage, @\"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\", \"<UUID>\")\n| extend Template = replace_regex(Template, @\"\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b\", \"<IP>\")\n| extend Template = replace_regex(Template, @\"cpu\\d+\", \"cpu<N>\")\n| extend Template = replace_regex(Template, @\"\\d{5,}\", \"<N>\")\n| extend Template = replace_regex(Template, @\"\\b[0-9a-f]{6,}\\b\", \"<HEX>\")\n| extend MessagePreview = substring(Template, 0, 120)\n| summarize Count = count(), Variants = dcount(NormalizedMessage), Hosts = dcount(HostName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by AppName, MessagePreview\n| order by Count desc\n| take 20",
         "size": 1,
         "title": "Top Repeated Emergency (Sev 0) Messages (grouped)",
-        "noDataMessage": "\ud83d\udfe2 HEALTHY",
+        "noDataMessage": "🟢 HEALTHY",
         "queryType": 0,
         "visualization": "table",
-        "gridSettings": { "formatters": [{ "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "redDark" } }] },
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Count",
+              "formatter": 8,
+              "formatOptions": {
+                "palette": "redDark"
+              }
+            }
+          ]
+        },
         "showExportToExcel": true,
-        "crossComponentResources": ["{Workspace}"],
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "emerg-top-repeated"
@@ -444,12 +456,14 @@
         "version": "KqlItem/1.0",
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\"))\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
         "size": 0,
-        "title": "\ud83d\udd34 Customer-Actionable Emergency (Sev 0) Events (NSX TN-connection noise excluded)",
-        "noDataMessage": "\ud83d\udfe2 HEALTHY \u2014 No customer-actionable emergency events in selected time range.",
+        "title": "🔴 Customer-Actionable Emergency (Sev 0) Events (NSX TN-connection noise excluded)",
+        "noDataMessage": "🟢 HEALTHY — No customer-actionable emergency events in selected time range.",
         "queryType": 0,
         "visualization": "table",
         "showExportToExcel": true,
-        "crossComponentResources": ["{Workspace}"],
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "emerg-customer-actionable"
@@ -494,7 +508,7 @@
     {
       "type": 1,
       "content": {
-        "json": "#### Understanding the alert event count\n\nPer [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1) **Severity 1 (`alert`)** means *\"immediate action required\"* \u2014 hardware failures triggering HA failovers, for example. **In Azure VMware Solution the raw `alert` stream mixes Microsoft-managed platform events and customer-impacting data-plane events at the same severity level**, so the raw grid alone doesn't tell you what to act on.\n\nThat's why this dashboard pairs the **raw Severity 1 grid** (above) with a **Customer-Actionable Alert Events** panel (below) that filters to the patterns you can act on. Use the customer-actionable panel as your real \"is anything wrong?\" view; use the raw grid only when investigating a specific incident.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
+        "json": "#### Understanding the alert event count\n\nPer [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1) **Severity 1 (`alert`)** means *\"immediate action required\"* — hardware failures triggering HA failovers, for example. **In Azure VMware Solution the raw `alert` stream mixes Microsoft-managed platform events and customer-impacting data-plane events at the same severity level**, so the raw grid alone doesn't tell you what to act on.\n\nThat's why this dashboard pairs the **raw Severity 1 grid** (above) with a **Customer-Actionable Alert Events** panel (below) that filters to the patterns you can act on. Use the customer-actionable panel as your real \"is anything wrong?\" view; use the raw grid only when investigating a specific incident.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
       },
       "name": "alert-explanation"
     },
@@ -505,12 +519,24 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| extend NormalizedMessage = replace_regex(Message, @\"^\\d{4}-\\d{2}-\\d{2}T[^\\s]+\\s+\\S+\\s+\", \"\")\n| extend NormalizedMessage = replace_regex(NormalizedMessage, @\"opID=\\S+\", \"opID=<OPID>\")\n| extend Template = replace_regex(NormalizedMessage, @\"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\", \"<UUID>\")\n| extend Template = replace_regex(Template, @\"\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b\", \"<IP>\")\n| extend Template = replace_regex(Template, @\"cpu\\d+\", \"cpu<N>\")\n| extend Template = replace_regex(Template, @\"\\d{5,}\", \"<N>\")\n| extend Template = replace_regex(Template, @\"\\b[0-9a-f]{6,}\\b\", \"<HEX>\")\n| extend MessagePreview = substring(Template, 0, 120)\n| summarize Count = count(), Variants = dcount(NormalizedMessage), Hosts = dcount(HostName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by AppName, MessagePreview\n| order by Count desc\n| take 20",
         "size": 1,
         "title": "Top Repeated Alert (Sev 1) Messages (grouped)",
-        "noDataMessage": "\ud83d\udfe2 HEALTHY",
+        "noDataMessage": "🟢 HEALTHY",
         "queryType": 0,
         "visualization": "table",
-        "gridSettings": { "formatters": [{ "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "red" } }] },
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Count",
+              "formatter": 8,
+              "formatOptions": {
+                "palette": "red"
+              }
+            }
+          ]
+        },
         "showExportToExcel": true,
-        "crossComponentResources": ["{Workspace}"],
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "alert-top-repeated"
@@ -518,7 +544,7 @@
     {
       "type": 1,
       "content": {
-        "json": "**What counts as a customer-actionable Alert event?**\n\nThe AVS service forwards every host syslog entry tagged `alert`. The raw stream mixes Microsoft-managed platform events (which Microsoft pages on and resolves) with **data-plane events that impact your workloads and do require your action** \u2014 most notably **NSX-T Edge tunnel state changes**, which correlate with ExpressRoute Global Reach / AVS Interconnect / IPsec VPN outages.\n\n**The Customer-Actionable Alert panel below surfaces those patterns** so you can act fast without hunting through the raw grid. Real customer-actionable Alert events typically look like:\n\n| AppName | Example Message | What it usually means |\n|---|---|---|\n| `cgw` on `Auto_Hosting_Mesh-*` | `tunnel t_<N> state change: UP->DOWN` / `DOWN->UP` | NSX-T Edge tunnel flap \u2014 if you use **ExpressRoute Global Reach**, **AVS Interconnect**, or **IPsec VPN**, this is a real connectivity incident. Check the ExpressRoute circuit / BGP peer / IPsec SA on your side. |\n| `vmkernel` | `Lost connectivity to volume <uuid>` / `PDL (Permanent Device Loss)` / `APD (All Paths Down)` | Datastore or storage-path loss on a specific host \u2014 open an Azure support ticket with the host + volume UUID |\n| `hostd` | `Failed to power on VM` / `VM disk consolidation required` | VM-level lifecycle failure \u2014 investigate the specific VM |\n| `vpxd` | `Cannot synchronize host` / `Host is not responding` | vCenter \u2194 ESXi management failure \u2014 may self-heal; if sustained, open a support ticket |\n| `nsx-syslog` / `nsx-edge` / `cgw` | `BGP peer down` / `IPSec tunnel down` / `routing instance failure` | NSX data-plane routing issue impacting your workloads |\n| `dhclient` / `dnsmasq` | repeated `NAK` / `no DHCPOFFERS received` | Customer-side DNS / DHCP misconfiguration |\n\nIf the panel below is empty (\ud83d\udfe2 HEALTHY), you have **no customer-actionable alert signal** in the selected time range \u2014 even if the raw Severity 1 grid above shows non-zero counts from platform components Microsoft handles."
+        "json": "**What counts as a customer-actionable Alert event?**\n\nThe AVS service forwards every host syslog entry tagged `alert`. The raw stream mixes Microsoft-managed platform events (which Microsoft pages on and resolves) with **data-plane events that impact your workloads and do require your action** — most notably **NSX-T Edge tunnel state changes**, which correlate with ExpressRoute Global Reach / AVS Interconnect / IPsec VPN outages.\n\n**The Customer-Actionable Alert panel below surfaces those patterns** so you can act fast without hunting through the raw grid. Real customer-actionable Alert events typically look like:\n\n| AppName | Example Message | What it usually means |\n|---|---|---|\n| `cgw` on `Auto_Hosting_Mesh-*` | `tunnel t_<N> state change: UP->DOWN` / `DOWN->UP` | NSX-T Edge tunnel flap — if you use **ExpressRoute Global Reach**, **AVS Interconnect**, or **IPsec VPN**, this is a real connectivity incident. Check the ExpressRoute circuit / BGP peer / IPsec SA on your side. |\n| `vmkernel` | `Lost connectivity to volume <uuid>` / `PDL (Permanent Device Loss)` / `APD (All Paths Down)` | Datastore or storage-path loss on a specific host — open an Azure support ticket with the host + volume UUID |\n| `hostd` | `Failed to power on VM` / `VM disk consolidation required` | VM-level lifecycle failure — investigate the specific VM |\n| `vpxd` | `Cannot synchronize host` / `Host is not responding` | vCenter ↔ ESXi management failure — may self-heal; if sustained, open a support ticket |\n| `nsx-syslog` / `nsx-edge` / `cgw` | `BGP peer down` / `IPSec tunnel down` / `routing instance failure` | NSX data-plane routing issue impacting your workloads |\n| `dhclient` / `dnsmasq` | repeated `NAK` / `no DHCPOFFERS received` | Customer-side DNS / DHCP misconfiguration |\n\nIf the panel below is empty (🟢 HEALTHY), you have **no customer-actionable alert signal** in the selected time range — even if the raw Severity 1 grid above shows non-zero counts from platform components Microsoft handles."
       },
       "name": "alert-customer-actionable-info"
     },
@@ -528,12 +554,14 @@
         "version": "KqlItem/1.0",
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| where (AppName == \"cgw\" and Message has \"state change\")\n    or (AppName == \"vmkernel\" and (Message has \"Lost connectivity to volume\" or Message has \"PDL\" or Message has \"All Paths Down\" or Message has \"APD\"))\n    or (AppName == \"hostd\" and (Message has \"Failed to power on\" or Message has \"consolidation\"))\n    or (AppName == \"vpxd\" and (Message has \"Cannot synchronize host\" or Message has \"not responding\"))\n    or (AppName in (\"nsx-syslog\", \"nsx-edge\") and (Message has \"BGP peer down\" or Message has \"IPSec tunnel down\" or Message has \"routing instance\"))\n    or (AppName in (\"dhclient\", \"dnsmasq\") and (Message has \"NAK\" or Message has \"no DHCPOFFERS\"))\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 200",
         "size": 0,
-        "title": "\ud83d\udd34 Customer-Actionable Alert (Sev 1) Events (tunnel / storage / VM / routing / DNS-DHCP patterns)",
-        "noDataMessage": "\ud83d\udfe2 HEALTHY \u2014 No customer-actionable alert events in selected time range.",
+        "title": "🔴 Customer-Actionable Alert (Sev 1) Events (tunnel / storage / VM / routing / DNS-DHCP patterns)",
+        "noDataMessage": "🟢 HEALTHY — No customer-actionable alert events in selected time range.",
         "queryType": 0,
         "visualization": "table",
         "showExportToExcel": true,
-        "crossComponentResources": ["{Workspace}"],
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "alert-customer-actionable"
@@ -584,7 +612,7 @@
     {
       "type": 1,
       "content": {
-        "json": "#### Understanding the critical event count\n\n**Critical (Severity 2)** events indicate serious conditions such as hardware failures, disk group issues, or host disconnections. In Azure VMware Solution, **the vast majority of critical events come from Microsoft-managed vSAN/control-plane components** that you cannot patch or reconfigure:\n\n| AppName | Pattern | Why it's noise |\n|---|---|---|\n| `vsand` | `calculator::CalculateHostStats ... outdated data` | vSAN stats calculator retry \u2014 transient, self-healing |\n| `clomd` | `CLOMDecomMonitor` / `CLOMDecomCMMDSResponseCb` / `CLOM_CrawlItem` | vSAN Cluster-Level Object Manager looking up already-deleted decommission objects |\n| `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation \u2014 informational |\n| `etcd` | `failed to purge snap db file ... device or resource busy` | etcd housekeeping retry \u2014 transient `device or resource busy` on snapshot DB cleanup; self-resolves on next purge cycle |\n| `esxcli` (all) | Python tracebacks ending in `http.client.HTTPException: 503 Service Unavailable` | Microsoft's host-management tooling — transient `hostd`/`vpxa` management-plane blip. Customer has no esxcli access in AVS. |\n\n**The deployed Critical alert rule excludes all of these sources** so you only get notified for customer-actionable critical events (`hostd`, `vmkernel`, `vpxd`, real ESXi/NSX issues). The workbook panels below show all critical events for full visibility, plus a dedicated **Customer-Actionable Critical Events** panel that applies the same exclusions.\n\n> **Reference:** [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage) | [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues)"
+        "json": "#### Understanding the critical event count\n\n**Critical (Severity 2)** events indicate serious conditions such as hardware failures, disk group issues, or host disconnections. In Azure VMware Solution, **the vast majority of critical events come from Microsoft-managed vSAN/control-plane components** that you cannot patch or reconfigure:\n\n| AppName | Pattern | Why it's noise |\n|---|---|---|\n| `vsand` | `calculator::CalculateHostStats ... outdated data` | vSAN stats calculator retry — transient, self-healing |\n| `clomd` | `CLOMDecomMonitor` / `CLOMDecomCMMDSResponseCb` / `CLOM_CrawlItem` | vSAN Cluster-Level Object Manager looking up already-deleted decommission objects |\n| `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation — informational |\n| `etcd` | `failed to purge snap db file ... device or resource busy` | etcd housekeeping retry — transient `device or resource busy` on snapshot DB cleanup; self-resolves on next purge cycle |\n| `esxcli` (all) | Python tracebacks ending in `http.client.HTTPException: 503 Service Unavailable` | Microsoft's host-management tooling — transient `hostd`/`vpxa` management-plane blip. Customer has no esxcli access in AVS. |\n\n**The deployed Critical alert rule excludes all of these sources** so you only get notified for customer-actionable critical events (`hostd`, `vmkernel`, `vpxd`, real ESXi/NSX issues). The workbook panels below show all critical events for full visibility, plus a dedicated **Customer-Actionable Critical Events** panel that applies the same exclusions.\n\n> **Reference:** [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage) | [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues)"
       },
       "name": "crit-explanation"
     },
@@ -597,8 +625,15 @@
         "title": "Critical (Sev 2) Events by Source (AppName)",
         "queryType": 0,
         "visualization": "barchart",
-        "chartSettings": { "xAxis": "AppName", "yAxis": ["Count"] },
-        "crossComponentResources": ["{Workspace}"],
+        "chartSettings": {
+          "xAxis": "AppName",
+          "yAxis": [
+            "Count"
+          ]
+        },
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
@@ -611,12 +646,24 @@
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| extend NormalizedMessage = replace_regex(Message, @\"^\\d{4}-\\d{2}-\\d{2}T[^\\s]+\\s+\\S+\\s+\", \"\")\n| extend NormalizedMessage = replace_regex(NormalizedMessage, @\"opID=\\S+\", \"opID=<OPID>\")\n| extend Template = replace_regex(NormalizedMessage, @\"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\", \"<UUID>\")\n| extend Template = replace_regex(Template, @\"\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b\", \"<IP>\")\n| extend Template = replace_regex(Template, @\"cpu\\d+\", \"cpu<N>\")\n| extend Template = replace_regex(Template, @\"\\d{5,}\", \"<N>\")\n| extend Template = replace_regex(Template, @\"\\b[0-9a-f]{6,}\\b\", \"<HEX>\")\n| extend MessagePreview = substring(Template, 0, 120)\n| summarize Count = count(), Variants = dcount(NormalizedMessage), Hosts = dcount(HostName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by AppName, MessagePreview\n| order by Count desc\n| take 20",
         "size": 1,
         "title": "Top Repeated Critical (Sev 2) Messages (grouped by message text; first 120 characters shown)",
-        "noDataMessage": "\ud83d\udfe2 HEALTHY",
+        "noDataMessage": "🟢 HEALTHY",
         "queryType": 0,
         "visualization": "table",
-        "gridSettings": { "formatters": [{ "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "orange" } }] },
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Count",
+              "formatter": 8,
+              "formatOptions": {
+                "palette": "orange"
+              }
+            }
+          ]
+        },
         "showExportToExcel": true,
-        "crossComponentResources": ["{Workspace}"],
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
@@ -635,12 +682,14 @@
         "version": "KqlItem/1.0",
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
         "size": 0,
-        "title": "\ud83d\udfe0 Customer-Actionable Critical (Sev 2) Events (vSAN/etcd platform noise excluded)",
-        "noDataMessage": "\ud83d\udfe2 HEALTHY \u2014 No customer-actionable critical events in selected time range.",
+        "title": "🟠 Customer-Actionable Critical (Sev 2) Events (vSAN/etcd platform noise excluded)",
+        "noDataMessage": "🟢 HEALTHY — No customer-actionable critical events in selected time range.",
         "queryType": 0,
         "visualization": "table",
         "showExportToExcel": true,
-        "crossComponentResources": ["{Workspace}"],
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "crit-customer-actionable"
@@ -778,7 +827,7 @@
     {
       "type": 1,
       "content": {
-        "json": "#### What these event panels mean\n\n- **Host Events (connection lost, shutdown, added, connected, disconnected)**: Tracks major host lifecycle and connectivity changes. A lost connection or shutdown may indicate host instability, maintenance, or an outage; added/connected events usually indicate recovery, expansion, or re-registration.\n- **VM Events (Removed from Inventory, Disconnected, Guest Reboot)**: Tracks workload-VM lifecycle. **A large `VM Removed from Inventory` count is almost always vSAN health-check noise** (short-lived test VMs created and deleted by Microsoft-managed vSAN, tagged `com.vmware.vsan.health`) — not real deletions. The deployed VM-Removed and VM-Disconnected alerts already filter these out. `VM Guest Reboot` reflects guest-OS initiated reboots inside your workload VMs.\n- **DNS Failures Over Time**: Shows failed DNS lookups from VMware components. Persistent failures can break name resolution for services, updates, cluster operations, or external integrations.\n- **Distributed Firewall Blocked Traffic Over Time**: Shows traffic denied by the NSX distributed firewall. Some blocks are expected by policy, but spikes or unexpected blocks can indicate misconfiguration or application connectivity problems.\n- **Host Maintenance Mode Changes**: Tracks hosts entering or exiting maintenance mode. This is often expected during patching or operational work, but unexpected changes can explain VM movement, reduced capacity, or service impact.\n- **Role / Permission Changes (Security Audit)**: Tracks permission or role assignment changes such as `RoleAddedEvent`. These are important for security review because they may reflect legitimate admin activity or unauthorized privilege changes."
+        "json": "#### What these event panels mean\n\n- **VM Events (Removed from Inventory, Disconnected, Guest Reboot)**: Tracks workload-VM lifecycle. **A large `VM Removed from Inventory` count is almost always vSAN health-check noise** (short-lived test VMs created and deleted by Microsoft-managed vSAN, tagged `com.vmware.vsan.health`) — not real deletions. The deployed VM-Removed and VM-Disconnected alerts already filter these out. `VM Guest Reboot` reflects guest-OS initiated reboots inside your workload VMs.\n- **Host Events (connection lost, shutdown, added, connected, disconnected)**: Tracks major host lifecycle and connectivity changes. A lost connection or shutdown may indicate host instability, maintenance, or an outage; added/connected events usually indicate recovery, expansion, or re-registration.\n- **Host Maintenance Mode Changes**: Tracks hosts entering or exiting maintenance mode. This is often expected during patching or operational work, but unexpected changes can explain VM movement, reduced capacity, or service impact.\n- **DNS Failures Over Time**: Shows failed DNS lookups from VMware components. Persistent failures can break name resolution for services, updates, cluster operations, or external integrations.\n- **Distributed Firewall Blocked Traffic Over Time**: Shows traffic denied by the NSX distributed firewall. Some blocks are expected by policy, but spikes or unexpected blocks can indicate misconfiguration or application connectivity problems.\n- **Role / Permission Changes (Security Audit)**: Tracks permission or role assignment changes such as `RoleAddedEvent`. These are important for security review because they may reflect legitimate admin activity or unauthorized privilege changes."
       },
       "name": "section-part2-explanation"
     },
@@ -821,6 +870,64 @@
       "name": "event-summary-tiles"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "**Why does \"VM Removed from Inventory\" show such a high count?**\n\nA large `VmRemovedEvent` count on a healthy cluster is almost always **vSAN health-check noise**, not real VM deletions. Actual volume varies with cluster activity. vSAN periodically creates short-lived test VMs to validate datastore health, then removes them — every create/remove pair generates a `vim.event.VmRemovedEvent` tagged with `[com.vmware.vsan.health]`.\n\nReal customer-actionable VM removals look different — they reference an actual workload VM name, a user/admin in the event, and don't carry the vSAN health-check tag.\n\n- **Top Repeated VM Events** (below) groups events by message pattern so you can see which ones are dominant.\n- **VM Lifecycle Events** (table) shows the raw stream with `VM Removed from Inventory` included alongside disconnect/reboot/power/create."
+      },
+      "name": "vm-events-info"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"vmdisconnectedevent\", \"vmremovedevent\", \"VmGuestRebootEvent\", \"VmPowerStateChangedEvent\", \"vmcreatedevent\")\n| extend EventType = case(\n    Message has \"vmremovedevent\", \"VM Removed from Inventory\",\n    Message has \"vmdisconnectedevent\", \"VM Disconnected\",\n    Message has \"VmGuestRebootEvent\", \"VM Guest Reboot\",\n    Message has \"VmPowerStateChangedEvent\", \"VM Power State Changed\",\n    Message has \"vmcreatedevent\", \"VM Created\",\n    \"Other\")\n| extend Source = case(\n    Message has \"com.vmware.vsan.health\", \"vSAN health-check (noise)\",\n    Message has \"com.vmware.\", extract(@\"\\[com\\.vmware\\.([\\w\\.]+)\\]\", 1, Message),\n    \"Customer / vCenter\")\n| summarize Count = count(), Hosts = dcount(HostName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by EventType, Source\n| order by Count desc",
+        "size": 1,
+        "title": "Top Repeated VM Events (grouped by event type + source — shows whether a high count is vSAN health-check noise or real activity)",
+        "noDataMessage": "🟢 HEALTHY — No VM lifecycle events in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Count",
+              "formatter": 8,
+              "formatOptions": {
+                "palette": "blue"
+              }
+            },
+            {
+              "columnMatch": "Source",
+              "formatter": 1
+            }
+          ]
+        },
+        "showExportToExcel": true,
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "vm-events-grouped"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"vmdisconnectedevent\", \"vmremovedevent\", \"VmGuestRebootEvent\", \"VmPowerStateChangedEvent\", \"vmcreatedevent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+        "size": 1,
+        "title": "VM Lifecycle Events — raw stream (disconnected, removed from inventory, rebooted, power change, created)",
+        "noDataMessage": "🟢 HEALTHY",
+        "queryType": 0,
+        "visualization": "table",
+        "showExportToExcel": true,
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "vm-events-grid"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
@@ -835,7 +942,9 @@
             {
               "columnMatch": "Count",
               "formatter": 8,
-              "formatOptions": { "palette": "blue" }
+              "formatOptions": {
+                "palette": "blue"
+              }
             },
             {
               "columnMatch": "EventType",
@@ -881,8 +990,17 @@
         "visualization": "table",
         "gridSettings": {
           "formatters": [
-            { "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "blue" } },
-            { "columnMatch": "EventType", "formatter": 1 }
+            {
+              "columnMatch": "Count",
+              "formatter": 8,
+              "formatOptions": {
+                "palette": "blue"
+              }
+            },
+            {
+              "columnMatch": "EventType",
+              "formatter": 1
+            }
           ]
         },
         "showExportToExcel": true,
@@ -912,62 +1030,6 @@
       },
       "customWidth": "50",
       "name": "maintenance-grid"
-    },
-    {
-      "type": 1,
-      "content": {
-        "json": "**Why does \"VM Removed from Inventory\" show such a high count?**\n\nA large `VmRemovedEvent` count on a healthy cluster is almost always **vSAN health-check noise**, not real VM deletions. Actual volume varies with cluster activity. vSAN periodically creates short-lived test VMs to validate datastore health, then removes them — every create/remove pair generates a `vim.event.VmRemovedEvent` tagged with `[com.vmware.vsan.health]`.\n\nReal customer-actionable VM removals look different — they reference an actual workload VM name, a user/admin in the event, and don't carry the vSAN health-check tag.\n\n- **Top Repeated VM Events** (below) groups events by message pattern so you can see which ones are dominant.\n- **VM Lifecycle Events** (table) shows the raw stream with `VM Removed from Inventory` included alongside disconnect/reboot/power/create."
-      },
-      "name": "vm-events-info"
-    },
-    {
-      "type": 3,
-      "content": {
-        "version": "KqlItem/1.0",
-        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"vmdisconnectedevent\", \"vmremovedevent\", \"VmGuestRebootEvent\", \"VmPowerStateChangedEvent\", \"vmcreatedevent\")\n| extend EventType = case(\n    Message has \"vmremovedevent\", \"VM Removed from Inventory\",\n    Message has \"vmdisconnectedevent\", \"VM Disconnected\",\n    Message has \"VmGuestRebootEvent\", \"VM Guest Reboot\",\n    Message has \"VmPowerStateChangedEvent\", \"VM Power State Changed\",\n    Message has \"vmcreatedevent\", \"VM Created\",\n    \"Other\")\n| extend Source = case(\n    Message has \"com.vmware.vsan.health\", \"vSAN health-check (noise)\",\n    Message has \"com.vmware.\", extract(@\"\\[com\\.vmware\\.([\\w\\.]+)\\]\", 1, Message),\n    \"Customer / vCenter\")\n| summarize Count = count(), Hosts = dcount(HostName), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by EventType, Source\n| order by Count desc",
-        "size": 1,
-        "title": "Top Repeated VM Events (grouped by event type + source — shows whether a high count is vSAN health-check noise or real activity)",
-        "noDataMessage": "🟢 HEALTHY — No VM lifecycle events in selected time range.",
-        "queryType": 0,
-        "visualization": "table",
-        "gridSettings": {
-          "formatters": [
-            {
-              "columnMatch": "Count",
-              "formatter": 8,
-              "formatOptions": { "palette": "blue" }
-            },
-            {
-              "columnMatch": "Source",
-              "formatter": 1
-            }
-          ]
-        },
-        "showExportToExcel": true,
-        "crossComponentResources": [
-          "{Workspace}"
-        ],
-        "resourceType": "microsoft.operationalinsights/workspaces"
-      },
-      "name": "vm-events-grouped"
-    },
-    {
-      "type": 3,
-      "content": {
-        "version": "KqlItem/1.0",
-        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"vmdisconnectedevent\", \"vmremovedevent\", \"VmGuestRebootEvent\", \"VmPowerStateChangedEvent\", \"vmcreatedevent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
-        "size": 1,
-        "title": "VM Lifecycle Events — raw stream (disconnected, removed from inventory, rebooted, power change, created)",
-        "noDataMessage": "🟢 HEALTHY",
-        "queryType": 0,
-        "visualization": "table",
-        "showExportToExcel": true,
-        "crossComponentResources": [
-          "{Workspace}"
-        ],
-        "resourceType": "microsoft.operationalinsights/workspaces"
-      },
-      "name": "vm-events-grid"
     },
     {
       "type": 3,
@@ -1027,8 +1089,17 @@
         "visualization": "table",
         "gridSettings": {
           "formatters": [
-            { "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "blue" } },
-            { "columnMatch": "EventType", "formatter": 1 }
+            {
+              "columnMatch": "Count",
+              "formatter": 8,
+              "formatOptions": {
+                "palette": "blue"
+              }
+            },
+            {
+              "columnMatch": "EventType",
+              "formatter": 1
+            }
           ]
         },
         "showExportToExcel": true,
