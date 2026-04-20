@@ -870,6 +870,50 @@
       "name": "host-events-grid"
     },
     {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| extend EventType = iff(Message has \"entered maintenance mode\", \"Entered Maintenance\", \"Exited Maintenance\")\n| extend TargetHost = extract(@\"host\\s+([^\\s]+)\\s+(?:has entered|has exited)\", 1, Message)\n| extend TargetHost = iff(isempty(TargetHost), HostName, TargetHost)\n| summarize Count = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by EventType, TargetHost\n| order by Count desc",
+        "size": 1,
+        "title": "Top Repeated Host Maintenance Events (grouped by event type + target host — read this first)",
+        "noDataMessage": "🟢 HEALTHY — No host maintenance mode changes in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            { "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "blue" } },
+            { "columnMatch": "EventType", "formatter": 1 }
+          ]
+        },
+        "showExportToExcel": true,
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "customWidth": "50",
+      "name": "maintenance-grouped"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 50",
+        "size": 1,
+        "title": "Host Maintenance Mode Changes — raw stream",
+        "noDataMessage": "🟢 HEALTHY",
+        "queryType": 0,
+        "visualization": "table",
+        "showExportToExcel": true,
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "customWidth": "50",
+      "name": "maintenance-grid"
+    },
+    {
       "type": 1,
       "content": {
         "json": "**Why does \"VM Removed from Inventory\" show such a high count?**\n\nA large `VmRemovedEvent` count on a healthy cluster is almost always **vSAN health-check noise**, not real VM deletions. Actual volume varies with cluster activity. vSAN periodically creates short-lived test VMs to validate datastore health, then removes them — every create/remove pair generates a `vim.event.VmRemovedEvent` tagged with `[com.vmware.vsan.health]`.\n\nReal customer-actionable VM removals look different — they reference an actual workload VM name, a user/admin in the event, and don't carry the vSAN health-check tag.\n\n- **Top Repeated VM Events** (below) groups events by message pattern so you can see which ones are dominant.\n- **VM Lifecycle Events** (table) shows the raw stream with `VM Removed from Inventory` included alongside disconnect/reboot/power/create."
@@ -970,50 +1014,6 @@
       },
       "customWidth": "50",
       "name": "dfw-blocked-trend"
-    },
-    {
-      "type": 3,
-      "content": {
-        "version": "KqlItem/1.0",
-        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| extend EventType = iff(Message has \"entered maintenance mode\", \"Entered Maintenance\", \"Exited Maintenance\")\n| extend TargetHost = extract(@\"host\\s+([^\\s]+)\\s+(?:has entered|has exited)\", 1, Message)\n| extend TargetHost = iff(isempty(TargetHost), HostName, TargetHost)\n| summarize Count = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by EventType, TargetHost\n| order by Count desc",
-        "size": 1,
-        "title": "Top Repeated Host Maintenance Events (grouped by event type + target host — read this first)",
-        "noDataMessage": "🟢 HEALTHY — No host maintenance mode changes in selected time range.",
-        "queryType": 0,
-        "visualization": "table",
-        "gridSettings": {
-          "formatters": [
-            { "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "blue" } },
-            { "columnMatch": "EventType", "formatter": 1 }
-          ]
-        },
-        "showExportToExcel": true,
-        "crossComponentResources": [
-          "{Workspace}"
-        ],
-        "resourceType": "microsoft.operationalinsights/workspaces"
-      },
-      "customWidth": "50",
-      "name": "maintenance-grouped"
-    },
-    {
-      "type": 3,
-      "content": {
-        "version": "KqlItem/1.0",
-        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 50",
-        "size": 1,
-        "title": "Host Maintenance Mode Changes — raw stream",
-        "noDataMessage": "🟢 HEALTHY",
-        "queryType": 0,
-        "visualization": "table",
-        "showExportToExcel": true,
-        "crossComponentResources": [
-          "{Workspace}"
-        ],
-        "resourceType": "microsoft.operationalinsights/workspaces"
-      },
-      "customWidth": "50",
-      "name": "maintenance-grid"
     },
     {
       "type": 3,
