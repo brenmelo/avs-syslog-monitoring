@@ -1304,7 +1304,7 @@
     {
       "type": 1,
       "content": {
-        "json": "---\n*Source: [Microsoft — AVSSyslog queries](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/queries/avssyslog) | [AVSSyslog schema](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/avssyslog)*"
+        "json": "---\n*Workbook **v1.0** — see [GitHub Releases](https://github.com/brenmelo/avs-syslog-monitoring/releases) for change history.*\n\n*Source: [Microsoft — AVSSyslog queries](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/queries/avssyslog) | [AVSSyslog schema](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/avssyslog)*"
       },
       "name": "footer"
     }
