@@ -361,10 +361,11 @@ AVSSyslog
 | where not(AppName == "vsand" and Message has "CalculateHostStats")
 | where not(AppName in ("clomd", "clomd-whatif"))
 | where not(AppName == "etcd" and Message has "purge snap")  // matches both 'failed to purge snap file' and 'failed to purge snap db file'
+| where AppName != "esxcli"  // Microsoft host-management tooling — customer has no esxcli access in AVS
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
 
-> **Note:** The deployed alert rule automatically excludes ~99% of platform noise from Microsoft-managed vSAN/control-plane components (`vsand`, `clomd`, `clomd-whatif`, `etcd`). See [Known Noisy Events](#-known-noisy-events--exclusion-filters) below.
+> **Note:** The deployed alert rule automatically excludes platform noise from Microsoft-managed vSAN/control-plane components (`vsand`, `clomd`, `clomd-whatif`, `etcd`) and Microsoft host-management tooling (`esxcli`). See [Known Noisy Events](#-known-noisy-events--exclusion-filters) below.
 
 #### Sev2-Error (optional — can be noisy)
 
@@ -689,7 +690,7 @@ VMware platform components can generate large volumes of severity `critical` and
 
 ### Excluded sources (Sev 1 Critical alert)
 
-The majority of `critical` syslog events in typical AVS environments come from four Microsoft-managed vSAN/control-plane components that customers cannot patch or reconfigure. In a representative 1,000-event sample the approximate share was: `vsand` ~90%, `clomd` ~9%, `clomd-whatif` ~1%, `etcd` <1% (your mix will vary with cluster activity).
+The majority of `critical` syslog events in typical AVS environments come from Microsoft-managed vSAN/control-plane components and host-management tooling that customers cannot patch or reconfigure. In a representative 1,000-event sample the approximate share was: `vsand` ~90%, `clomd` ~9%, `clomd-whatif` ~1%, `etcd` <1% (your mix will vary with cluster activity).
 
 | AppName | Pattern | What it is |
 |---|---|---|
@@ -697,6 +698,7 @@ The majority of `critical` syslog events in typical AVS environments come from f
 | `clomd` | `CLOMDecomMonitor` / `CLOMDecomCMMDSResponseCb` / `CLOM_CrawlItem` | vSAN Cluster-Level Object Manager looking up already-deleted decommission objects. Self-resolving. |
 | `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation — informational, daemon logs it at "critical". |
 | `etcd` | `failed to purge snap db file ... device or resource busy` | etcd housekeeping retry — transient `device or resource busy` lock during snapshot DB cleanup; self-resolves on next purge cycle. |
+| `esxcli` (all) | Python tracebacks ending in `http.client.HTTPException: 503 Service Unavailable` | Microsoft's host-management tooling hitting a transient `hostd`/`vpxa` management-plane blip. Customers have no `esxcli` access in AVS, so these are never customer-actionable. |
 
 **Why it's safe to exclude:**
 - All four are part of the **Microsoft-managed AVS infrastructure** ([shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)) — customers cannot patch, restart, or reconfigure them.
@@ -709,6 +711,7 @@ The majority of `critical` syslog events in typical AVS environments come from f
 | where not(AppName == "vsand" and Message has "CalculateHostStats")
 | where not(AppName in ("clomd", "clomd-whatif"))
 | where not(AppName == "etcd" and Message has "purge snap")  // covers both 'failed to purge snap file' and 'failed to purge snap db file'
+| where AppName != "esxcli"  // Microsoft host-management tooling; no customer access in AVS
 ```
 
 **If you create alerts manually**, add these filters after the severity filter. If you use the **Deploy to Azure** button, they're already included.
@@ -769,6 +772,7 @@ AVSSyslog
 | where not(AppName == "vsand" and Message has "CalculateHostStats")
 | where not(AppName in ("clomd", "clomd-whatif"))
 | where not(AppName == "etcd" and Message has "purge snap")
+| where AppName != "esxcli"
 | where not(Message has "your-other-noisy-pattern-here")
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
