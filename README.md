@@ -689,14 +689,14 @@ VMware platform components can generate large volumes of severity `critical` and
 
 ### Excluded sources (Sev 1 Critical alert)
 
-Analysis of real AVS environments shows ~99% of "critical" syslog events come from four Microsoft-managed vSAN/control-plane components that customers cannot patch or reconfigure:
+The majority of `critical` syslog events in typical AVS environments come from four Microsoft-managed vSAN/control-plane components that customers cannot patch or reconfigure. In a representative 1,000-event sample the approximate share was: `vsand` ~90%, `clomd` ~9%, `clomd-whatif` ~1%, `etcd` <1% (your mix will vary with cluster activity).
 
 | AppName | Pattern | What it is |
 |---|---|---|
-| `vsand` | `calculator::CalculateHostStats ... outdated data` | vSAN stats calculator — high-res data was stale, calc skipped. No data loss. ~895 events / 1,000 sample. |
-| `clomd` | `CLOMDecomMonitor` / `CLOMDecomCMMDSResponseCb` / `CLOM_CrawlItem` | vSAN Cluster-Level Object Manager looking up already-deleted decommission objects. Self-resolving. ~89 events / 1,000 sample. |
-| `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation — informational, daemon logs it at "critical". ~13 events / 1,000 sample. |
-| `etcd` | `failed to purge snap db file ... device or resource busy` | etcd housekeeping retry — transient `device or resource busy` lock during snapshot DB cleanup; self-resolves on next purge cycle. ~3 events / 1,000 sample. |
+| `vsand` | `calculator::CalculateHostStats ... outdated data` | vSAN stats calculator — high-res data was stale, calc skipped. No data loss. |
+| `clomd` | `CLOMDecomMonitor` / `CLOMDecomCMMDSResponseCb` / `CLOM_CrawlItem` | vSAN Cluster-Level Object Manager looking up already-deleted decommission objects. Self-resolving. |
+| `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation — informational, daemon logs it at "critical". |
+| `etcd` | `failed to purge snap db file ... device or resource busy` | etcd housekeeping retry — transient `device or resource busy` lock during snapshot DB cleanup; self-resolves on next purge cycle. |
 
 **Why it's safe to exclude:**
 - All four are part of the **Microsoft-managed AVS infrastructure** ([shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)) — customers cannot patch, restart, or reconfigure them.
