@@ -360,7 +360,7 @@ AVSSyslog
 | where Severity in ("crit", "critical")
 | where not(AppName == "vsand" and Message has "CalculateHostStats")
 | where not(AppName in ("clomd", "clomd-whatif"))
-| where not(AppName == "etcd" and Message has "failed to purge snap file")
+| where not(AppName == "etcd" and Message has "purge snap")  // matches both 'failed to purge snap file' and 'failed to purge snap db file'
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
 
@@ -696,7 +696,7 @@ Analysis of real AVS environments shows ~99% of "critical" syslog events come fr
 | `vsand` | `calculator::CalculateHostStats ... outdated data` | vSAN stats calculator — high-res data was stale, calc skipped. No data loss. ~895 events / 1,000 sample. |
 | `clomd` | `CLOMDecomMonitor` / `CLOMDecomCMMDSResponseCb` / `CLOM_CrawlItem` | vSAN Cluster-Level Object Manager looking up already-deleted decommission objects. Self-resolving. ~89 events / 1,000 sample. |
 | `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation — informational, daemon logs it at "critical". ~13 events / 1,000 sample. |
-| `etcd` | `failed to purge snap file ... device or resource busy` | etcd housekeeping retry — transient lock on snap file purge, self-resolves. ~3 events / 1,000 sample. |
+| `etcd` | `failed to purge snap db file ... device or resource busy` | etcd housekeeping retry — transient `device or resource busy` lock during snapshot DB cleanup; self-resolves on next purge cycle. ~3 events / 1,000 sample. |
 
 **Why it's safe to exclude:**
 - All four are part of the **Microsoft-managed AVS infrastructure** ([shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)) — customers cannot patch, restart, or reconfigure them.
@@ -708,7 +708,7 @@ Analysis of real AVS environments shows ~99% of "critical" syslog events come fr
 ```kql
 | where not(AppName == "vsand" and Message has "CalculateHostStats")
 | where not(AppName in ("clomd", "clomd-whatif"))
-| where not(AppName == "etcd" and Message has "failed to purge snap file")
+| where not(AppName == "etcd" and Message has "purge snap")  // covers both 'failed to purge snap file' and 'failed to purge snap db file'
 ```
 
 **If you create alerts manually**, add these filters after the severity filter. If you use the **Deploy to Azure** button, they're already included.
@@ -768,7 +768,7 @@ AVSSyslog
 | where Severity in ("crit", "critical")
 | where not(AppName == "vsand" and Message has "CalculateHostStats")
 | where not(AppName in ("clomd", "clomd-whatif"))
-| where not(AppName == "etcd" and Message has "failed to purge snap file")
+| where not(AppName == "etcd" and Message has "purge snap")
 | where not(Message has "your-other-noisy-pattern-here")
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
