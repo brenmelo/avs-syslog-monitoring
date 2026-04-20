@@ -4,7 +4,7 @@ Pre-built Azure Monitor **Workbook** (~40 panels) and **14 syslog alert rules** 
 
 ### The core solution
 
-- **Workbook** — Severity distribution, per-severity drill-downs (Emergency/Alert/Critical/Error) with explanations and grouped Top Repeated Messages, event-specific views (host failures, VM changes, DNS, DFW, maintenance, role/permission changes), per-host health heatmap, and syslog ingestion pipeline health.
+- **Workbook** — Severity distribution, per-severity drill-downs (Emergency/Alert/Critical/Error) with explanations and grouped Top Repeated Messages, event-specific views (host failures, VM changes, DNS, DFW, maintenance, role/permission changes), per-source health heatmap (ESXi / vCenter / NSX Manager / NSX Edge VM), and syslog ingestion pipeline health.
 - **14 alert rules** — Scheduled query alerts across three severity tiers:
   - **Sev 0** — Emergency, Alert, host connection lost, host shutdown, syslog ingestion heartbeat
   - **Sev 1** — Critical, VM disconnected/removed, DNS failures, role & permission changes
@@ -70,7 +70,7 @@ AVSSyslog
 
 ## 📊 1. Deploy the Workbook
 
-The workbook gives you real-time dashboards for severity distribution, event-specific monitoring, host health, and pipeline status — start here.
+The workbook gives you real-time dashboards for severity distribution, event-specific monitoring, syslog source health, and pipeline status — start here.
 
 ### Option A — One-click Deploy
 
@@ -109,7 +109,7 @@ Once deployed, the workbook includes:
 | **Overview** | Severity distribution tiles, pie chart, top event sources by AppName |
 | **Part 1 — Severity-Based** | Time series and detail grids for Emergency, Alert, Critical, Error events |
 | **Part 2 — Event-Specific** | Summary tiles and grids for host failures, VM changes, DNS, DFW, maintenance, role changes |
-| **Host Health Overview** | Per-host heatmap and trend of high-impact events |
+| **Syslog Source Health** | Per-source heatmap of high-impact events, classified by `SourceType` (ESXi Host / vCenter / NSX Manager / NSX Edge VM) |
 | **Data Pipeline Health** | Syslog ingestion heartbeat tile and volume chart |
 
 ---
