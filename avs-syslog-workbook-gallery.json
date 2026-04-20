@@ -307,6 +307,42 @@
       "name": "top-sources-bar"
     },
     {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "let base = union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter});\nlet emergCA = base\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\"))\n| extend SeverityLevel = \"0 - Emergency\";\nlet alertCA = base\n| where Severity == \"alert\"\n| where (AppName == \"cgw\" and Message has \"state change\")\n    or (AppName == \"vmkernel\" and (Message has \"Lost connectivity to volume\" or Message has \"PDL\" or Message has \"All Paths Down\" or Message has \"APD\"))\n    or (AppName == \"hostd\" and (Message has \"Failed to power on\" or Message has \"consolidation\"))\n    or (AppName == \"vpxd\" and (Message has \"Cannot synchronize host\" or Message has \"not responding\"))\n    or (AppName in (\"nsx-syslog\", \"nsx-edge\") and (Message has \"BGP peer down\" or Message has \"IPSec tunnel down\" or Message has \"routing instance\"))\n    or (AppName in (\"dhclient\", \"dnsmasq\") and (Message has \"NAK\" or Message has \"no DHCPOFFERS\"))\n| extend SeverityLevel = \"1 - Alert\";\nlet critCA = base\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| extend SeverityLevel = \"2 - Critical\";\nunion emergCA, alertCA, critCA\n| summarize Count = count() by SeverityLevel, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
+        "size": 0,
+        "title": "Customer-Actionable Events Over Time by Severity (Sev 0–2, matches Customer-Actionable panels)",
+        "noDataMessage": "🟢 HEALTHY — No customer-actionable Sev 0–2 events in selected time range.",
+        "queryType": 0,
+        "visualization": "barchart",
+        "chartSettings": {
+          "ySettings": {
+            "min": 0
+          },
+          "seriesLabelSettings": [
+            {
+              "seriesName": "0 - Emergency",
+              "color": "redDark"
+            },
+            {
+              "seriesName": "1 - Alert",
+              "color": "red"
+            },
+            {
+              "seriesName": "2 - Critical",
+              "color": "orange"
+            }
+          ]
+        },
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "host-Severity-trend"
+    },
+    {
       "type": 1,
       "content": {
         "json": "---\n## Part 1 — Severity-Based Monitoring (Sev 0 Emergency / Sev 1 Alert / Sev 2 Critical / Sev 3 Error)"
@@ -1192,33 +1228,6 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "host-Severity-heatmap"
-    },
-    {
-      "type": 3,
-      "content": {
-        "version": "KqlItem/1.0",
-        "query": "let base = union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter});\nlet emergCA = base\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\"))\n| extend SeverityLevel = \"0 - Emergency\";\nlet alertCA = base\n| where Severity == \"alert\"\n| where (AppName == \"cgw\" and Message has \"state change\")\n    or (AppName == \"vmkernel\" and (Message has \"Lost connectivity to volume\" or Message has \"PDL\" or Message has \"All Paths Down\" or Message has \"APD\"))\n    or (AppName == \"hostd\" and (Message has \"Failed to power on\" or Message has \"consolidation\"))\n    or (AppName == \"vpxd\" and (Message has \"Cannot synchronize host\" or Message has \"not responding\"))\n    or (AppName in (\"nsx-syslog\", \"nsx-edge\") and (Message has \"BGP peer down\" or Message has \"IPSec tunnel down\" or Message has \"routing instance\"))\n    or (AppName in (\"dhclient\", \"dnsmasq\") and (Message has \"NAK\" or Message has \"no DHCPOFFERS\"))\n| extend SeverityLevel = \"1 - Alert\";\nlet critCA = base\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| extend SeverityLevel = \"2 - Critical\";\nunion emergCA, alertCA, critCA\n| summarize Count = count() by SeverityLevel, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
-        "size": 0,
-        "title": "Customer-Actionable Events Over Time by Severity (Sev 0–2, matches Customer-Actionable panels)",
-        "noDataMessage": "🟢 HEALTHY — No customer-actionable Sev 0–2 events in selected time range.",
-        "queryType": 0,
-        "visualization": "barchart",
-        "chartSettings": {
-          "ySettings": {
-            "min": 0
-          },
-          "seriesLabelSettings": [
-            { "seriesName": "0 - Emergency", "color": "redDark" },
-            { "seriesName": "1 - Alert", "color": "red" },
-            { "seriesName": "2 - Critical", "color": "orange" }
-          ]
-        },
-        "crossComponentResources": [
-          "{Workspace}"
-        ],
-        "resourceType": "microsoft.operationalinsights/workspaces"
-      },
-      "name": "host-Severity-trend"
     },
     {
       "type": 1,
