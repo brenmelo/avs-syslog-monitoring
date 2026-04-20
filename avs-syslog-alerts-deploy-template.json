@@ -574,7 +574,7 @@
       "condition": "[parameters('deployRolePermissionChanges')]",
       "properties": {
         "displayName": "[format('{0}-Event-Security-RoleChange', parameters('alertNamePrefix'))]",
-        "description": "Role/permission change events",
+        "description": "Role/permission change events (Role/Permission Added/Updated/Removed)",
         "severity": 1,
         "enabled": true,
         "evaluationFrequency": "PT5M",
@@ -585,7 +585,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where Message has \"RoleAddedEvent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "query": "AVSSyslog\n| where Message has_any (\"RoleAddedEvent\", \"RoleUpdatedEvent\", \"RoleRemovedEvent\", \"PermissionAddedEvent\", \"PermissionUpdatedEvent\", \"PermissionRemovedEvent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,
