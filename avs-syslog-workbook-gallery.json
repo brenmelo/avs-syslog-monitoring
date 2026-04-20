@@ -4,7 +4,7 @@
     {
       "type": 1,
       "content": {
-        "json": "# AVS Syslog Monitoring Dashboard\n\nThis workbook provides visibility into VMware syslog events flowing into the **AVSSyslog** table from your Azure VMware Solution (AVS) private cloud.\n\n- **Part 1** — Severity-based monitoring (Sev 0 Emergency, Sev 1 Alert, Sev 2 Critical, Sev 3 Error)\n- **Part 2** — Event-specific monitoring (host failures, VM changes, DNS, firewall, etc.)\n- **Host Health** — Per-host Severity breakdown\n- **Pipeline Health** — Ingestion heartbeat and volume\n\n---"
+        "json": "# AVS Syslog Monitoring Dashboard\n\nThis workbook provides visibility into VMware syslog events flowing into the **AVSSyslog** table from your Azure VMware Solution (AVS) private cloud.\n\n- **Part 1** — Severity-based monitoring (Sev 0 Emergency, Sev 1 Alert, Sev 2 Critical, Sev 3 Error)\n- **Part 2** — Event-specific monitoring (host failures, VM changes, DNS, firewall, etc.)\n- **Syslog Source Health** — Per-source severity breakdown (ESXi, vCenter, NSX Manager, NSX Edge VMs)\n- **Pipeline Health** — Ingestion heartbeat and volume\n\n---"
       },
       "name": "header"
     },
@@ -89,7 +89,7 @@
             },
             "defaultValue": "value::all",
             "queryType": 0,
-            "label": "Host",
+            "label": "Syslog Source",
             "crossComponentResources": [
               "{Workspace}"
             ],
@@ -1169,7 +1169,7 @@
     {
       "type": 1,
       "content": {
-        "json": "---\n## Host Health Overview"
+        "json": "---\n## Syslog Source Health\n\nBreakdown of high-impact events by syslog source. Sources include ESXi hypervisor hosts, vCenter, NSX Manager appliances, and NSX Edge VMs — not just ESXi hosts. Use the `SourceType` column to filter."
       },
       "name": "section-host-health"
     },
@@ -1177,9 +1177,9 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\", \"alert\", \"crit\", \"critical\", \"err\", \"error\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| summarize\n    emerg = countif(Severity in (\"emerg\", \"emergency\")),\n    alert = countif(Severity == \"alert\"),\n    crit = countif(Severity in (\"crit\", \"critical\")),\n    err = countif(Severity in (\"err\", \"error\")),\n    Total = count()\n  by HostName\n| order by Total desc",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\", \"alert\", \"crit\", \"critical\", \"err\", \"error\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| extend SourceType = case(\n    HostName startswith \"esx\" and HostName contains \".avs.azure.com\", \"ESXi Host\",\n    HostName == \"vc\", \"vCenter\",\n    HostName startswith \"TNT\" and HostName contains \"-NSX-\", \"NSX Manager\",\n    HostName startswith \"TNT\" and HostName contains \"-EVM-\", \"NSX Edge VM\",\n    \"Other\")\n| summarize\n    emerg = countif(Severity in (\"emerg\", \"emergency\")),\n    alert = countif(Severity == \"alert\"),\n    crit = countif(Severity in (\"crit\", \"critical\")),\n    err = countif(Severity in (\"err\", \"error\")),\n    Total = count()\n  by SourceType, HostName\n| order by Total desc",
         "size": 1,
-        "title": "High-Impact Events per Host (Severity 0–3, Microsoft-managed noise excluded)",
+        "title": "High-Impact Events per Syslog Source (Severity 0–3, Microsoft-managed noise excluded)",
         "queryType": 0,
         "visualization": "table",
         "gridSettings": {
