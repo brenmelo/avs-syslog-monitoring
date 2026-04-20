@@ -225,7 +225,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "query": "AVSSyslog\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,
