@@ -649,11 +649,16 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"err\", \"error\")\n| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated desc",
+        "query": "let topApps = union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"err\", \"error\")\n| summarize Total = count() by AppName\n| top 10 by Total\n| project AppName;\nunion isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"err\", \"error\")\n| where AppName in (topApps)\n| summarize ErrorCount = count() by AppName, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
         "size": 0,
-        "title": "🟡 Error (Sev 3) Events Over Time by Host + App: Error condition",
+        "title": "🟡 Error (Sev 3) Events Over Time by AppName (top 10 sources)",
         "queryType": 0,
-        "visualization": "areachart",
+        "visualization": "linechart",
+        "chartSettings": {
+          "ySettings": {
+            "min": 0
+          }
+        },
         "crossComponentResources": [
           "{Workspace}"
         ],
