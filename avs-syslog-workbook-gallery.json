@@ -1197,15 +1197,21 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "let base = union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\", \"alert\", \"crit\", \"critical\", \"err\", \"error\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\";\nlet topHosts = base | summarize Total = count() by HostName | top 10 by Total | project HostName;\nbase\n| where HostName in (topHosts)\n| summarize Count = count() by HostName, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\", \"alert\", \"crit\", \"critical\", \"err\", \"error\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| extend SeverityLevel = case(\n    Severity in (\"emerg\", \"emergency\"), \"0 - Emergency\",\n    Severity == \"alert\", \"1 - Alert\",\n    Severity in (\"crit\", \"critical\"), \"2 - Critical\",\n    Severity in (\"err\", \"error\"), \"3 - Error\",\n    \"Other\")\n| summarize Count = count() by SeverityLevel, bin(TimeGenerated, {TimeRange:grain})\n| order by TimeGenerated asc",
         "size": 0,
-        "title": "High-Impact Events per Host Over Time (top 10 hosts, Microsoft-managed noise excluded)",
+        "title": "High-Impact Events Over Time by Severity (Microsoft-managed noise excluded)",
         "queryType": 0,
-        "visualization": "linechart",
+        "visualization": "barchart",
         "chartSettings": {
           "ySettings": {
             "min": 0
-          }
+          },
+          "seriesLabelSettings": [
+            { "seriesName": "0 - Emergency", "color": "redDark" },
+            { "seriesName": "1 - Alert", "color": "red" },
+            { "seriesName": "2 - Critical", "color": "orange" },
+            { "seriesName": "3 - Error", "color": "yellow" }
+          ]
         },
         "crossComponentResources": [
           "{Workspace}"
