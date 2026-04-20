@@ -494,7 +494,7 @@
     {
       "type": 1,
       "content": {
-        "json": "#### Understanding the alert event count\n\n**Alert (Severity 1)** events require immediate action \u2014 hardware failures triggering HA failovers, for example. In Azure VMware Solution, **Microsoft manages the physical hardware and HA infrastructure**. If alert events come from platform components (`hostd`, `vpxd`, `nsx-syslog`, `nsx-mpa`), Microsoft will detect and respond automatically. If events relate to customer workloads, the customer should investigate.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
+        "json": "#### Understanding the alert event count\n\nPer [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1) **Severity 1 (`alert`)** means *\"immediate action required\"* \u2014 hardware failures triggering HA failovers, for example. **In Azure VMware Solution the raw `alert` stream mixes Microsoft-managed platform events and customer-impacting data-plane events at the same severity level**, so the raw grid alone doesn't tell you what to act on.\n\nThat's why this dashboard pairs the **raw Severity 1 grid** (above) with a **Customer-Actionable Alert Events** panel (below) that filters to the patterns you can act on. Use the customer-actionable panel as your real \"is anything wrong?\" view; use the raw grid only when investigating a specific incident.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
       },
       "name": "alert-explanation"
     },
@@ -514,6 +514,52 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "alert-top-repeated"
+    },
+    {
+      "type": 1,
+      "content": {
+        "json": "**What counts as a customer-actionable Alert event?**\n\nThe AVS service forwards every host syslog entry tagged `alert`. The raw stream mixes Microsoft-managed platform events (which Microsoft pages on and resolves) with **data-plane events that impact your workloads and do require your action** \u2014 most notably **NSX-T Edge tunnel state changes**, which correlate with ExpressRoute Global Reach / AVS Interconnect / IPsec VPN outages.\n\n**The Customer-Actionable Alert panel below surfaces those patterns** so you can act fast without hunting through the raw grid. Real customer-actionable Alert events typically look like:\n\n| AppName | Example Message | What it usually means |\n|---|---|---|\n| `cgw` on `Auto_Hosting_Mesh-*` | `tunnel t_<N> state change: UP->DOWN` / `DOWN->UP` | NSX-T Edge tunnel flap \u2014 if you use **ExpressRoute Global Reach**, **AVS Interconnect**, or **IPsec VPN**, this is a real connectivity incident. Check the ExpressRoute circuit / BGP peer / IPsec SA on your side. |\n| `vmkernel` | `Lost connectivity to volume <uuid>` / `PDL (Permanent Device Loss)` / `APD (All Paths Down)` | Datastore or storage-path loss on a specific host \u2014 open an Azure support ticket with the host + volume UUID |\n| `hostd` | `Failed to power on VM` / `VM disk consolidation required` | VM-level lifecycle failure \u2014 investigate the specific VM |\n| `vpxd` | `Cannot synchronize host` / `Host is not responding` | vCenter \u2194 ESXi management failure \u2014 may self-heal; if sustained, open a support ticket |\n| `nsx-syslog` / `nsx-edge` / `cgw` | `BGP peer down` / `IPSec tunnel down` / `routing instance failure` | NSX data-plane routing issue impacting your workloads |\n| `dhclient` / `dnsmasq` | repeated `NAK` / `no DHCPOFFERS received` | Customer-side DNS / DHCP misconfiguration |\n\nIf both panels below are empty (\ud83d\udfe2 HEALTHY), you have **no customer-actionable alert signal** in the selected time range \u2014 even if the raw Severity 1 grid above shows non-zero counts from platform components Microsoft handles."
+      },
+      "name": "alert-customer-actionable-info"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| where AppName == \"cgw\" and Message has \"tunnel\" and Message has \"state change\"\n| extend TunnelId = extract(@\"tunnel (\\S+) state change\", 1, Message)\n| extend Transition = extract(@\"state change:\\s*(\\S+)\", 1, Message)\n| summarize Flaps = count(), DownEvents = countif(Transition startswith \"UP->DOWN\"), UpEvents = countif(Transition startswith \"DOWN->UP\"), DistinctTunnels = dcount(TunnelId), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by HostName\n| order by Flaps desc",
+        "size": 0,
+        "title": "\ud83d\udd17 NSX Edge Tunnel State Changes (cgw) \u2014 correlates to ExpressRoute / AVS Interconnect / IPsec VPN incidents",
+        "noDataMessage": "\ud83d\udfe2 HEALTHY \u2014 No NSX-T Edge tunnel flaps in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            { "columnMatch": "Flaps", "formatter": 8, "formatOptions": { "palette": "red" } },
+            { "columnMatch": "DownEvents", "formatter": 8, "formatOptions": { "palette": "redBright" } },
+            { "columnMatch": "UpEvents", "formatter": 8, "formatOptions": { "palette": "green" } }
+          ]
+        },
+        "showExportToExcel": true,
+        "crossComponentResources": ["{Workspace}"],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "alert-customer-actionable-tunnel-summary"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| where (AppName == \"cgw\" and Message has \"state change\")\n    or (AppName == \"vmkernel\" and (Message has \"Lost connectivity to volume\" or Message has \"PDL\" or Message has \"All Paths Down\" or Message has \"APD\"))\n    or (AppName == \"hostd\" and (Message has \"Failed to power on\" or Message has \"consolidation\"))\n    or (AppName == \"vpxd\" and (Message has \"Cannot synchronize host\" or Message has \"not responding\"))\n    or (AppName in (\"nsx-syslog\", \"nsx-edge\") and (Message has \"BGP peer down\" or Message has \"IPSec tunnel down\" or Message has \"routing instance\"))\n    or (AppName in (\"dhclient\", \"dnsmasq\") and (Message has \"NAK\" or Message has \"no DHCPOFFERS\"))\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 200",
+        "size": 0,
+        "title": "\ud83d\udd34 Customer-Actionable Alert Events (tunnel / storage / VM / routing / DNS-DHCP patterns)",
+        "noDataMessage": "\ud83d\udfe2 HEALTHY \u2014 No customer-actionable alert events in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "showExportToExcel": true,
+        "crossComponentResources": ["{Workspace}"],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "alert-customer-actionable"
     },
     {
       "type": 3,
