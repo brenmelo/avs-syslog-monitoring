@@ -824,9 +824,40 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"lost connection to the host\", \"hostshutdownevent\", \"hostaddedevent\", \"hostconnectedevent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"lost connection to the host\", \"hostshutdownevent\", \"hostaddedevent\", \"hostconnectedevent\", \"hostdisconnectedevent\", \"HostConnectionLostEvent\")\n| extend EventType = case(\n    Message has \"HostConnectionLostEvent\" or Message has \"lost connection to the host\", \"Host Connection Lost\",\n    Message has \"hostshutdownevent\", \"Host Shutdown\",\n    Message has \"hostdisconnectedevent\", \"Host Disconnected\",\n    Message has \"hostconnectedevent\", \"Host Connected\",\n    Message has \"hostaddedevent\", \"Host Added\",\n    \"Other\")\n| extend TargetHost = extract(@\"(?:Connected to|Added host|Disconnected from|lost connection to the host)\\s+([^\\s\\]]+)\", 1, Message)\n| extend TargetHost = iff(isempty(TargetHost), \"(unknown)\", TargetHost)\n| summarize Count = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by EventType, TargetHost\n| order by Count desc",
         "size": 1,
-        "title": "Host Events (connection lost, shutdown, added, connected)",
+        "title": "Top Repeated Host Events (grouped by event type + target host — read this first)",
+        "noDataMessage": "🟢 HEALTHY — No host connection/shutdown/add events in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            {
+              "columnMatch": "Count",
+              "formatter": 8,
+              "formatOptions": { "palette": "blue" }
+            },
+            {
+              "columnMatch": "EventType",
+              "formatter": 1
+            }
+          ]
+        },
+        "showExportToExcel": true,
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "host-events-grouped"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"lost connection to the host\", \"hostshutdownevent\", \"hostaddedevent\", \"hostconnectedevent\", \"hostdisconnectedevent\", \"HostConnectionLostEvent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 100",
+        "size": 1,
+        "title": "Host Events — raw stream (connection lost, shutdown, added, connected, disconnected)",
         "noDataMessage": "🟢 HEALTHY",
         "queryType": 0,
         "visualization": "table",
@@ -944,9 +975,34 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| extend EventType = iff(Message has \"entered maintenance mode\", \"Entered Maintenance\", \"Exited Maintenance\")\n| extend TargetHost = extract(@\"host\\s+([^\\s]+)\\s+(?:has entered|has exited)\", 1, Message)\n| extend TargetHost = iff(isempty(TargetHost), HostName, TargetHost)\n| summarize Count = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by EventType, TargetHost\n| order by Count desc",
+        "size": 1,
+        "title": "Top Repeated Host Maintenance Events (grouped by event type + target host — read this first)",
+        "noDataMessage": "🟢 HEALTHY — No host maintenance mode changes in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            { "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "blue" } },
+            { "columnMatch": "EventType", "formatter": 1 }
+          ]
+        },
+        "showExportToExcel": true,
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "customWidth": "50",
+      "name": "maintenance-grouped"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"The host has entered maintenance mode\", \"The host has exited maintenance mode\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 50",
         "size": 1,
-        "title": "Host Maintenance Mode Changes",
+        "title": "Host Maintenance Mode Changes — raw stream",
         "noDataMessage": "🟢 HEALTHY",
         "queryType": 0,
         "visualization": "table",
@@ -963,9 +1019,34 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has \"RoleAddedEvent\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 50",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"RoleAddedEvent\", \"RoleUpdatedEvent\", \"RoleRemovedEvent\", \"PermissionAddedEvent\", \"PermissionUpdatedEvent\", \"PermissionRemovedEvent\")\n| extend EventType = case(\n    Message has \"RoleAddedEvent\", \"Role Added\",\n    Message has \"RoleUpdatedEvent\", \"Role Updated\",\n    Message has \"RoleRemovedEvent\", \"Role Removed\",\n    Message has \"PermissionAddedEvent\", \"Permission Added\",\n    Message has \"PermissionUpdatedEvent\", \"Permission Updated\",\n    Message has \"PermissionRemovedEvent\", \"Permission Removed\",\n    \"Other\")\n| extend Actor = extract(@\"\\[([^\\]]+\\\\[^\\]]+|[A-Za-z0-9._-]+@[A-Za-z0-9.-]+)\\]\", 1, Message)\n| extend Actor = iff(isempty(Actor), \"(unknown)\", Actor)\n| extend RoleName = extract(@\"(?:role|Role)\\s*[:=]?\\s*['\\\"]?([A-Za-z0-9 _-]+)['\\\"]?\", 1, Message)\n| summarize Count = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by EventType, Actor, RoleName\n| order by Count desc",
         "size": 1,
-        "title": "Role / Permission Changes (Security Audit)",
+        "title": "Top Repeated Role / Permission Changes (grouped by event type + actor — read this first)",
+        "noDataMessage": "🟢 HEALTHY — No role or permission changes in selected time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            { "columnMatch": "Count", "formatter": 8, "formatOptions": { "palette": "blue" } },
+            { "columnMatch": "EventType", "formatter": 1 }
+          ]
+        },
+        "showExportToExcel": true,
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "customWidth": "50",
+      "name": "role-changes-grouped"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Message has_any (\"RoleAddedEvent\", \"RoleUpdatedEvent\", \"RoleRemovedEvent\", \"PermissionAddedEvent\", \"PermissionUpdatedEvent\", \"PermissionRemovedEvent\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message\n| order by TimeGenerated desc\n| take 50",
+        "size": 1,
+        "title": "Role / Permission Changes (Security Audit) — raw stream",
         "noDataMessage": "🟢 HEALTHY",
         "queryType": 0,
         "visualization": "table",
