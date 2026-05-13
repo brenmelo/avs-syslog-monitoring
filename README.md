@@ -405,6 +405,24 @@ AVSSyslog
 
 ### Part 2 — Event-Specific Alerts
 
+#### Workbook panel → alert rule mapping
+
+Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** section corresponds to one of the deployed event-based alert rules below:
+
+| Workbook panel | Alert rule | Azure Monitor Sev |
+|---|---|---|
+| Host Events (HostConnectionLost) | `AVS-Event-Host-ConnectionLost` | 0 (Critical) |
+| Host Events (HostShutdownEvent) | `AVS-Event-Host-Shutdown` | 0 (Critical) |
+| VM Disconnected | `AVS-Event-VM-Disconnected` (excludes vSAN health-check noise) | 1 (Error) |
+| VM Removed from Inventory | `AVS-Event-VM-RemovedFromInventory` (excludes vSAN health-check noise) | 1 (Error) |
+| VM Guest Reboot | `AVS-Event-VM-GuestReboot` | 1 (Error) |
+| DNS Failures | `AVS-Event-DNS-Failures` (threshold-based) | 1 (Error) |
+| Distributed Firewall Blocked | `AVS-Event-NSX-DFW-BlockedSpike` (threshold-based) | 2 (Warning) |
+| Host Maintenance Mode | `AVS-Event-Host-MaintenanceMode` | 2 (Warning) |
+| Role / Permission Changes | `AVS-Event-Security-RoleChange` | 1 (Error) |
+
+> Event-specific alerts fire on **Message-field pattern matches**, regardless of the underlying syslog severity, so they're independent of the Part 1 severity-based rules.
+
 #### Host-ConnectionLost
 
 | Property | Value |
