@@ -101,6 +101,20 @@
               "{Workspace}"
             ],
             "resourceType": "microsoft.operationalinsights/workspaces"
+          },
+          {
+            "id": "a1b2c3d4-sevfilter",
+            "version": "KqlParameterItem/1.0",
+            "name": "SelectedSeverity",
+            "label": "Severity tab",
+            "type": 2,
+            "isRequired": true,
+            "value": "0",
+            "typeSettings": {
+              "additionalResourceOptions": []
+            },
+            "jsonData": "[{\"value\":\"0\",\"label\":\"Sev 0 Emergency\"},{\"value\":\"1\",\"label\":\"Sev 1 Alert\"},{\"value\":\"2\",\"label\":\"Sev 2 Critical\"},{\"value\":\"3\",\"label\":\"Sev 3 Error\"}]",
+            "hideParameter": true
           }
         ],
         "style": "pills",
@@ -162,7 +176,7 @@
         "version": "KqlItem/1.0",
         "query": "let tableExists = toscalar(union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime)[]) | summarize count()) > 0;\nlet actual = union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\", \"alert\", \"crit\", \"critical\", \"err\", \"error\")\n| extend SeverityGroup = case(\n    Severity in (\"emerg\", \"emergency\"), \"🔴 Emergency (Sev 0)\",\n    Severity == \"alert\", \"🟠 Alert (Sev 1)\",\n    Severity in (\"crit\", \"critical\"), \"🟡 Critical (Sev 2)\",\n    Severity in (\"err\", \"error\"), \"⚪ Error (Sev 3)\",\n    \"\")\n| summarize Count = count() by SeverityGroup;\nlet defaults = datatable(SeverityGroup:string, Count:long) [\n    \"🔴 Emergency (Sev 0)\", 0,\n    \"🟠 Alert (Sev 1)\", 0,\n    \"🟡 Critical (Sev 2)\", 0,\n    \"⚪ Error (Sev 3)\", 0\n];\nunion actual, defaults\n| summarize Count = sum(Count) by SeverityGroup\n| extend Status = case(not(tableExists), \"⚠️ No Data\", Count == 0, \"🟢 HEALTHY\", \"\")\n| extend SortOrder = case(SeverityGroup == \"🔴 Emergency (Sev 0)\", 0, SeverityGroup == \"🟠 Alert (Sev 1)\", 1, SeverityGroup == \"🟡 Critical (Sev 2)\", 2, SeverityGroup == \"⚪ Error (Sev 3)\", 3, 99)\n| order by SortOrder asc\n| project SeverityGroup, Count, Status",
         "size": 3,
-        "title": "High-Impact Events by Severity (0–3 only)",
+        "title": "High-Impact Events by Severity (0–3 only) — raw, unfiltered counts",
         "queryType": 0,
         "visualization": "tiles",
         "tileSettings": {
@@ -408,18 +422,74 @@
       "name": "Severity-trend"
     },
     {
+      "type": 11,
+      "content": {
+        "version": "LinksItem/1.0",
+        "style": "tabs",
+        "links": [
+          {
+            "id": "tab-sev0",
+            "cellValue": "SelectedSeverity",
+            "linkTarget": "parameter",
+            "linkLabel": "🔴 Sev 0 Emergency",
+            "subTarget": "0",
+            "preText": "",
+            "style": "link"
+          },
+          {
+            "id": "tab-sev1",
+            "cellValue": "SelectedSeverity",
+            "linkTarget": "parameter",
+            "linkLabel": "🟠 Sev 1 Alert",
+            "subTarget": "1",
+            "preText": "",
+            "style": "link"
+          },
+          {
+            "id": "tab-sev2",
+            "cellValue": "SelectedSeverity",
+            "linkTarget": "parameter",
+            "linkLabel": "🟡 Sev 2 Critical",
+            "subTarget": "2",
+            "preText": "",
+            "style": "link"
+          },
+          {
+            "id": "tab-sev3",
+            "cellValue": "SelectedSeverity",
+            "linkTarget": "parameter",
+            "linkLabel": "⚪ Sev 3 Error",
+            "subTarget": "3",
+            "preText": "",
+            "style": "link"
+          }
+        ]
+      },
+      "name": "severity-tabs"
+    },
+    {
       "type": 1,
       "content": {
         "json": "#### Understanding the emergency event count\n\nIn the standard syslog spec ([RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1)) **Severity 0 (`emerg`)** literally means *\"system is unusable\"* — kernel panics, complete storage failures, host PSOD. **In Azure VMware Solution, the raw `emerg` stream rarely matches that definition** because NSX-T Manager logs routine control-plane lifecycle events (TN connection handshake, fullsync completion) at `local6.emerg` even though they're informational and Microsoft-managed.\n\nThat's why this dashboard pairs the **raw Severity 0 grid** (above) with a **Customer-Actionable Emergency Events** panel (below) that filters out the known noise. Use the customer-actionable panel as your real \"is anything wrong?\" view; use the raw grid only when investigating a specific incident.\n\n**Known severity-mislabeled NSX events (excluded from the Sev0-Emergency alert):**\n\n| AppName | Pattern | Why it's excluded |\n|---|---|---|\n| `NSX` | `Accepts incoming connection from TN <UUID>` | NSX Manager accepting an ESXi transport-node connection — normal lifecycle event after host reboot, NSX upgrade, or reconnect. NSX-T logs this control-plane event at `local6.emerg` even though it's informational. |\n| `NSX` | `Finishes fullsync with TN <UUID>, mark as connected` | NSX Manager completed initial state sync with a transport node — this is the **success path** (TN is now healthy). Same severity-labeling issue. |\n\n*Only these two specific success-path messages are excluded. Any other NSX emergency event still alerts.* If you see the same TN UUID reconnecting many times in a short window, investigate as a potential reconnect-storm.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
       },
-      "name": "emerg-explanation"
+      "name": "emerg-explanation",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "0"
+      }
     },
     {
       "type": 1,
       "content": {
         "json": "**What counts as a customer-actionable Emergency event?**\n\nThe AVS service forwards every host syslog entry tagged `emerg`/`emergency`. In practice the vast majority are NSX control-plane handshake noise in the form `NSX: ... Accepts incoming connection from TN <UUID>` and `Finishes fullsync with TN <UUID>`. Volume depends on cluster activity (host reboots, NSX upgrades, TN reconnects) and can vary from a handful to many per day. These mean *the NSX management plane is working as designed* and Microsoft handles them; you cannot act on them.\n\n**This panel filters out the following Microsoft-managed noise patterns** so only events that warrant your attention remain:\n\n| Excluded source | Why | Owner |\n|---|---|---|\n| `NSX` + `Accepts incoming connection from TN` / `Finishes fullsync with TN` / `Disconnected with TN` | NSX management-plane handshake chatter between Manager and Transport Nodes — normal lifecycle events | Microsoft |\n| `vmkbacktrace` + `hostd-live` | ESXi watchdog auto-triggered live dump of the `hostd` process — diagnostic capture, not a host crash | Microsoft |\n If a real Severity 0 event does occur, it would most likely be one of the patterns below — though in practice these usually surface at Severity 1 (`alert`) or Severity 2 (`crit`) first, so check those sections too:\n\n| AppName | Example Message | What it usually means |\n|---|---|---|\n| `vmkernel` | `Lost connectivity to volume <uuid>` / `Device naa.xxx performance has deteriorated` | Storage path / vSAN datastore loss — open Azure support ticket |\n| `hostd` | `failed to load VM` / `Failed to power on VM` | VM-level failure originating on a specific host |\n| `vpxd` | `Cannot communicate with host` / `Host has lost connectivity` | vCenter ↔ ESXi communication failure |\n| `nsx-syslog` / `nsx-edge` | `BGP peer down` / `IPSec tunnel down` / `routing instance failure` | NSX data-plane issue affecting your workloads |\n| `dhclient` / `dnsmasq` | `protocol violation` / repeated `NAK` from your DNS server | Customer-side DNS / DHCP misconfiguration |\n\nIf this panel is empty (🟢 HEALTHY) you have **no actionable emergencies** in the selected time range — even if the unfiltered Severity tile above still shows a non-zero count from NSX TN handshake noise."
       },
-      "name": "emerg-customer-actionable-info"
+      "name": "emerg-customer-actionable-info",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "0"
+      }
     },
     {
       "type": 3,
@@ -437,7 +507,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "emerg-customer-actionable"
+      "name": "emerg-customer-actionable",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "0"
+      }
     },
     {
       "type": 3,
@@ -480,7 +555,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "emerg-grid"
+      "name": "emerg-grid",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "0"
+      }
     },
     {
       "type": 3,
@@ -509,21 +589,36 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "emerg-top-repeated"
+      "name": "emerg-top-repeated",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "0"
+      }
     },
     {
       "type": 1,
       "content": {
         "json": "#### Understanding the alert event count\n\nPer [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1) **Severity 1 (`alert`)** means *\"immediate action required\"* — hardware failures triggering HA failovers, for example. **In Azure VMware Solution the raw `alert` stream mixes Microsoft-managed platform events and customer-impacting data-plane events at the same severity level**, so the raw grid alone doesn't tell you what to act on.\n\nThat's why this dashboard pairs the **raw Severity 1 grid** (above) with a **Customer-Actionable Alert Events** panel (below) that filters to the patterns you can act on. Use the customer-actionable panel as your real \"is anything wrong?\" view; use the raw grid only when investigating a specific incident.\n\n> **Reference:** [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues) | [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)"
       },
-      "name": "alert-explanation"
+      "name": "alert-explanation",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "1"
+      }
     },
     {
       "type": 1,
       "content": {
         "json": "**What counts as a customer-actionable Alert event?**\n\nThe AVS service forwards every host syslog entry tagged `alert`. The raw stream mixes Microsoft-managed platform events (which Microsoft pages on and resolves) with **data-plane events that impact your workloads and do require your action** — most notably **NSX-T Edge tunnel state changes**, which correlate with ExpressRoute Global Reach / AVS Interconnect / IPsec VPN outages.\n\n**The Customer-Actionable Alert panel below surfaces those patterns** so you can act fast without hunting through the raw grid. Real customer-actionable Alert events typically look like:\n\n| AppName | Example Message | What it usually means |\n|---|---|---|\n| `cgw` on `Auto_Hosting_Mesh-*` | `tunnel t_<N> state change: UP->DOWN` / `DOWN->UP` | NSX-T Edge tunnel flap — if you use **ExpressRoute Global Reach**, **AVS Interconnect**, or **IPsec VPN**, this is a real connectivity incident. Check the ExpressRoute circuit / BGP peer / IPsec SA on your side. |\n| `vmkernel` | `Lost connectivity to volume <uuid>` / `PDL (Permanent Device Loss)` / `APD (All Paths Down)` | Datastore or storage-path loss on a specific host — open an Azure support ticket with the host + volume UUID |\n| `hostd` | `Failed to power on VM` / `VM disk consolidation required` | VM-level lifecycle failure — investigate the specific VM |\n| `vpxd` | `Cannot synchronize host` / `Host is not responding` | vCenter ↔ ESXi management failure — may self-heal; if sustained, open a support ticket |\n| `nsx-syslog` / `nsx-edge` / `cgw` | `BGP peer down` / `IPSec tunnel down` / `routing instance failure` | NSX data-plane routing issue impacting your workloads |\n| `dhclient` / `dnsmasq` | repeated `NAK` / `no DHCPOFFERS received` | Customer-side DNS / DHCP misconfiguration |\n\nIf the panel below is empty (🟢 HEALTHY), you have **no customer-actionable alert signal** in the selected time range — even if the raw Severity 1 grid above shows non-zero counts from platform components Microsoft handles."
       },
-      "name": "alert-customer-actionable-info"
+      "name": "alert-customer-actionable-info",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "1"
+      }
     },
     {
       "type": 3,
@@ -541,7 +636,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "alert-customer-actionable"
+      "name": "alert-customer-actionable",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "1"
+      }
     },
     {
       "type": 3,
@@ -578,7 +678,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "alert-grid"
+      "name": "alert-grid",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "1"
+      }
     },
     {
       "type": 3,
@@ -607,21 +712,36 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "alert-top-repeated"
+      "name": "alert-top-repeated",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "1"
+      }
     },
     {
       "type": 1,
       "content": {
         "json": "#### Understanding the critical event count\n\n**Critical (Severity 2)** events indicate serious conditions such as hardware failures, disk group issues, or host disconnections. In Azure VMware Solution, **the vast majority of critical events come from Microsoft-managed vSAN/control-plane components** that you cannot patch or reconfigure:\n\n| AppName | Pattern | Why it's noise |\n|---|---|---|\n| `vsand` | `calculator::CalculateHostStats ... outdated data` | vSAN stats calculator retry — transient, self-healing |\n| `clomd` | `CLOMDecomMonitor` / `CLOMDecomCMMDSResponseCb` / `CLOM_CrawlItem` | vSAN Cluster-Level Object Manager looking up already-deleted decommission objects |\n| `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation — informational |\n| `etcd` | `failed to purge snap db file ... device or resource busy` | etcd housekeeping retry — transient `device or resource busy` on snapshot DB cleanup; self-resolves on next purge cycle |\n| `esxcli` (all) | Python tracebacks ending in `http.client.HTTPException: 503 Service Unavailable` | Microsoft's host-management tooling — transient `hostd`/`vpxa` management-plane blip. Customer has no esxcli access in AVS. |\n\n**The deployed Critical alert rule excludes all of these sources** so you only get notified for customer-actionable critical events (`hostd`, `vmkernel`, `vpxd`, real ESXi/NSX issues). The workbook panels below show all critical events for full visibility, plus a dedicated **Customer-Actionable Critical Events** panel that applies the same exclusions.\n\n> **Reference:** [Shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage) | [Known issues](https://learn.microsoft.com/en-us/azure/azure-vmware/azure-vmware-solution-known-issues)"
       },
-      "name": "crit-explanation"
+      "name": "crit-explanation",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "2"
+      }
     },
     {
       "type": 1,
       "content": {
         "json": "**What counts as a customer-actionable Critical event?**\n\nMost `crit`/`critical` entries on a healthy AVS cluster come from internal vSAN and etcd housekeeping that Microsoft owns. **This panel filters those out** so only events you can act on remain. Excluded sources:\n\n| Excluded source | Why | Owner |\n|---|---|---|\n| `vsand` + `CalculateHostStats` | vSAN daemon collecting per-host capacity stats — runs continuously | Microsoft |\n| `clomd` / `clomd-whatif` | vSAN Cluster-Level Object Manager: object placement and \"what-if\" planning chatter | Microsoft |\n| `etcd` + `purge snap` (matches both `failed to purge snap file` and `failed to purge snap db file`) | etcd snapshot-cleanup retry — self-resolves | Microsoft |\n| `esxcli` (all) | Microsoft's host-management tooling — tracebacks with `503 Service Unavailable` from `hostd`/`vpxa` are transient management-plane blips; customer has no esxcli access in AVS | Microsoft |\n| `NSX` + `should resolve to the same FQDN` | NSX Manager dual-stack / CA-cert FQDN config check on Microsoft-managed appliances | Microsoft |\n| `NSX` + `failure domain ... are down` / `... are reachable` | NSX Edge VM failure-domain heartbeat flap — self-healing transient on Microsoft-managed Edge VMs (`TNT###-EVM-*`) | Microsoft |\n\nReal customer-actionable Critical events typically look like:\n\n| AppName | Example Message | What it usually means |\n|---|---|---|\n| `hostd` | `Failed to power on VM` / `VM disk consolidation needed` / `failed to load VM` | VM lifecycle failure on a specific host — investigate the VM |\n| `vmkernel` | `vmw_psp_rr: Could not select path for device` / `H:0x0 D:0x2 P:0x0` SCSI sense errors | Storage path or LUN-level error — open Azure support ticket |\n| `vpxd` / `vpxa` | `Cannot communicate with host` / `Lost master agent connection` | vCenter ↔ ESXi management-plane disruption |\n| `nsx-syslog` / `nsx-edge` | `BGP peer down` / `IPSec tunnel state DOWN` / `routing daemon crashed` | NSX data-plane issue affecting your workloads |\n| `dnsmasq` / `dhclient` | repeated `NXDOMAIN` / `no DHCPOFFERS received` | Customer-side DNS or DHCP misconfiguration |\n\nIf this panel is empty (🟢 HEALTHY) you have **no actionable critical events** in the selected time range — even if the unfiltered Severity tile above shows a non-zero count from platform housekeeping."
       },
-      "name": "crit-customer-actionable-info"
+      "name": "crit-customer-actionable-info",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "2"
+      }
     },
     {
       "type": 3,
@@ -639,7 +759,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "crit-customer-actionable"
+      "name": "crit-customer-actionable",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "2"
+      }
     },
     {
       "type": 3,
@@ -682,7 +807,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "crit-grid"
+      "name": "crit-grid",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "2"
+      }
     },
     {
       "type": 3,
@@ -705,7 +835,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "crit-by-source"
+      "name": "crit-by-source",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "2"
+      }
     },
     {
       "type": 3,
@@ -735,7 +870,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "crit-top-repeated"
+      "name": "crit-top-repeated",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "2"
+      }
     },
     {
       "type": 3,
@@ -756,14 +896,24 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "err-trend"
+      "name": "err-trend",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "3"
+      }
     },
     {
       "type": 1,
       "content": {
         "json": "#### Understanding the error count\n\nA high number of **error**-level events is common in VMware/ESXi environments and usually does **not** indicate a critical problem. VMware services such as `vpxa`, `hostd`, `vobd`, and `rhttpproxy` frequently log transient, self-resolving conditions (SOAP timeouts, temporary connection retries, NTP drift, vSAN rebalancing) at error severity. A single noisy service retrying every 30 seconds can generate thousands of identical entries per day.\n\nUse the **Errors by Source** and **Top Repeated Error Messages** panels below to identify whether the count is driven by a few repeating patterns (normal noise) or by many distinct messages (worth investigating). The repeated-message panel removes the leading timestamp and host prefix, then groups on the first 120 characters of the remaining message text so recurring errors are counted together more accurately."
       },
-      "name": "err-explanation"
+      "name": "err-explanation",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "3"
+      }
     },
     {
       "type": 3,
@@ -786,7 +936,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "err-by-source"
+      "name": "err-by-source",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "3"
+      }
     },
     {
       "type": 3,
@@ -815,7 +970,12 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "customWidth": "50",
-      "name": "err-top-repeated"
+      "name": "err-top-repeated",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "3"
+      }
     },
     {
       "type": 3,
@@ -858,7 +1018,12 @@
         ],
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
-      "name": "err-grid"
+      "name": "err-grid",
+      "conditionalVisibility": {
+        "parameterName": "SelectedSeverity",
+        "comparison": "isEqualTo",
+        "value": "3"
+      }
     },
     {
       "type": 1,
