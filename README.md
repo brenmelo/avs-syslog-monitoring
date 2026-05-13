@@ -296,6 +296,17 @@ Syslog uses eight standard severity levels defined in [RFC 5424](https://datatra
 
 > **Important — Dual Severity Forms:** VMware systems may log both the abbreviated form (`emerg`, `crit`, `err`) and the full-word form (`emergency`, `critical`, `error`). The [AVSSyslog schema](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/tables/avssyslog) lists the acceptable values as: `debug, info, notice, warn, err, crit, alert, emerg`. In practice, both abbreviated and full-word forms have been observed. All queries in this solution use `Severity in ("emerg", "emergency")` etc. to match both forms and prevent missed events.
 
+> **Important — Two severity scales in play:** workbook section labels use **syslog severity (RFC 5424)** where `0` is the most severe. Azure Monitor alert rule **names** are prefixed with **Azure Monitor severity** (also `0` = most critical, but a different scale). The two scales are **shifted by one** for `crit`/`alert`. Use the table below to translate.
+>
+> | Workbook section | Syslog severity (RFC 5424) | Alert rule | Azure Monitor Sev |
+> |---|---|---|---|
+> | **Sev 0 Emergency** | `emerg` (0) — system unusable | `AVS-Syslog-Sev0-Emergency` | 0 (Critical) |
+> | **Sev 1 Alert** | `alert` (1) — immediate action required | `AVS-Syslog-Sev0-Alert` | 0 (Critical) |
+> | **Sev 2 Critical** | `crit` / `critical` (2) — critical conditions | `AVS-Syslog-Sev1-Critical` | 1 (Error) |
+> | **Sev 3 Error** | `err` / `error` (3) — error conditions | *(disabled by default — too noisy on AVS)* | 2 (Warning) when enabled |
+>
+> Each **Customer-Actionable** panel in the workbook applies the **same exclusions** as its corresponding alert rule, so what you see in the panel is exactly what would have triggered an alert. Raw/unfiltered panels keep every event for forensics.
+
 **Why only Severity 0–3?**
 - Severity 0–2 events (`emerg`, `alert`, `crit`) are rare and almost always indicate a real problem — they should trigger immediate alerts.
 - Severity 3 (`err`/`error`) events are more common and can include routine errors. The Sev2-Error alert is **disabled by default** with a configurable threshold (default: 5 per host per 15 min) to avoid alert fatigue. Enable it only after reviewing your baseline.
