@@ -9,6 +9,13 @@
       "name": "header"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "## Severity legend & alert mapping\n\nWorkbook sections are numbered by **syslog severity (RFC 5424)** where `0` is the most severe. Alert rule **names** are prefixed with **Azure Monitor severity** (also `0` = most critical), which is *not* the same scale — that's why `Sev 1 Critical` in the alert name covers syslog `crit` (severity 2).\n\n| Workbook section | Syslog severity (RFC 5424) | Alert rule | Azure Monitor Sev |\n|---|---|---|---|\n| **Sev 0 Emergency** | `emerg` (0) — system unusable | `AVS-Syslog-Sev0-Emergency` | 0 (Critical) |\n| **Sev 1 Alert** | `alert` (1) — immediate action required | `AVS-Syslog-Sev0-Alert` | 0 (Critical) |\n| **Sev 2 Critical** | `crit` / `critical` (2) — critical conditions | `AVS-Syslog-Sev1-Critical` | 1 (Error) |\n| **Sev 3 Error** | `err` (3) — error conditions | *(not alerted — too noisy on AVS)* | — |\n\n> Each Customer-Actionable panel applies the **same exclusions** as its corresponding alert rule, so what you see in the panel is exactly what would have triggered an alert. Raw/unfiltered panels keep every event for forensics."
+      },
+      "name": "severity-legend"
+    },
+    {
       "type": 9,
       "content": {
         "version": "KqlParameterItem/1.0",
