@@ -321,11 +321,12 @@ These alerts fire based on the syslog `Severity` field value. VMware may log abb
 ```kql
 AVSSyslog
 | where Severity in ("emerg", "emergency")
-| where not(AppName == "NSX" and (Message has "Accepts incoming connection from TN" or Message has "Finishes fullsync with TN"))
+| where not(AppName == "NSX" and (Message has "Accepts incoming connection from TN" or Message has "Finishes fullsync with TN" or Message has "Disconnected with TN"))
+| where not(AppName == "vmkbacktrace" and Message has "hostd-live")
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
 
-> **Note:** Excludes two NSX transport-node connection success-path messages that NSX-T mislabels as `emerg`. See [Known Noisy Events](#-known-noisy-events--exclusion-filters) below.
+> **Note:** Excludes NSX transport-node connection lifecycle messages (Accepts/Finishes/Disconnected) that NSX-T mislabels as `emerg`, plus `vmkbacktrace` ESXi watchdog auto-triggered live dumps of `hostd` (diagnostic captures, not host crashes). See [Known Noisy Events](#-known-noisy-events--exclusion-filters) below.
 
 #### Sev0-Alert
 
@@ -362,10 +363,12 @@ AVSSyslog
 | where not(AppName in ("clomd", "clomd-whatif"))
 | where not(AppName == "etcd" and Message has "purge snap")  // matches both 'failed to purge snap file' and 'failed to purge snap db file'
 | where AppName != "esxcli"  // Microsoft host-management tooling — customer has no esxcli access in AVS
+| where not(AppName == "NSX" and Message has "should resolve to the same FQDN")
+| where not(AppName == "NSX" and Message has "failure domain" and (Message has "are down" or Message has "are reachable"))
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
 
-> **Note:** The deployed alert rule automatically excludes platform noise from Microsoft-managed vSAN/control-plane components (`vsand`, `clomd`, `clomd-whatif`, `etcd`) and Microsoft host-management tooling (`esxcli`). See [Known Noisy Events](#-known-noisy-events--exclusion-filters) below.
+> **Note:** The deployed alert rule automatically excludes platform noise from Microsoft-managed vSAN/control-plane components (`vsand`, `clomd`, `clomd-whatif`, `etcd`), Microsoft host-management tooling (`esxcli`), and NSX appliance/Edge VM platform messages (FQDN config check, Edge failure-domain heartbeat flap). See [Known Noisy Events](#-known-noisy-events--exclusion-filters) below.
 
 #### Sev2-Error (optional — can be noisy)
 
@@ -699,6 +702,8 @@ The majority of `critical` syslog events in typical AVS environments come from M
 | `clomd-whatif` | `CLOMAddNodesToJSONString ... decommission complete` | vSAN planning simulation — informational, daemon logs it at "critical". |
 | `etcd` | `failed to purge snap db file ... device or resource busy` | etcd housekeeping retry — transient `device or resource busy` lock during snapshot DB cleanup; self-resolves on next purge cycle. |
 | `esxcli` (all) | Python tracebacks ending in `http.client.HTTPException: 503 Service Unavailable` | Microsoft's host-management tooling hitting a transient `hostd`/`vpxa` management-plane blip. Customers have no `esxcli` access in AVS, so these are never customer-actionable. |
+| `NSX` (Manager) | `... should resolve to the same FQDN` (dual-stack / CA-signed cert config check) | NSX Manager configuration self-check on Microsoft-managed appliances (`TNTxxx-NSX-APPxx`). Not customer-tunable. |
+| `NSX` (Edge VM) | `All members of failure domain <uuid> are down` followed by `... are reachable` within minutes | NSX Edge VM failure-domain heartbeat flap on Microsoft-managed Edge VMs (`TNTxxx-EVM-*`). Self-healing transient. |
 
 **Why it's safe to exclude:**
 - All four are part of the **Microsoft-managed AVS infrastructure** ([shared responsibility](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage)) — customers cannot patch, restart, or reconfigure them.
@@ -712,6 +717,8 @@ The majority of `critical` syslog events in typical AVS environments come from M
 | where not(AppName in ("clomd", "clomd-whatif"))
 | where not(AppName == "etcd" and Message has "purge snap")  // covers both 'failed to purge snap file' and 'failed to purge snap db file'
 | where AppName != "esxcli"  // Microsoft host-management tooling; no customer access in AVS
+| where not(AppName == "NSX" and Message has "should resolve to the same FQDN")
+| where not(AppName == "NSX" and Message has "failure domain" and (Message has "are down" or Message has "are reachable"))
 ```
 
 **If you create alerts manually**, add these filters after the severity filter. If you use the **Deploy to Azure** button, they're already included.
@@ -726,6 +733,8 @@ NSX-T Manager is known to log certain control-plane lifecycle events with the sy
 |---|---|---|
 | `NSX` | `Accepts incoming connection from TN <UUID>` | NSX Manager accepting an ESXi transport-node (TN) connection. Normal lifecycle event after host reboot, NSX upgrade, or reconnect. |
 | `NSX` | `Finishes fullsync with TN <UUID>, mark as connected` | NSX Manager completed initial state sync with a transport node. This is the **success path** — the TN is now healthy. |
+| `NSX` | `Disconnected with TN <UUID>` | NSX Manager dropped a transport-node session (counterpart of Accepts/Finishes). Routine lifecycle event — the TN reconnects on its own. |
+| `vmkbacktrace` | `Creating trace file ... hostd-live ...` | ESXi watchdog auto-triggered live dump of the `hostd` process for diagnostics. Not a host crash; `hostd` keeps running. |
 
 **Why it's safe to exclude:**
 - The NSX Manager appliances (`TNTxxx-NSX-APPxx` hostnames) are **Microsoft-managed** under the AVS shared responsibility model — customers cannot tune their syslog severity.
@@ -736,7 +745,8 @@ NSX-T Manager is known to log certain control-plane lifecycle events with the sy
 
 **Exclusion filter used in the Sev0-Emergency alert rule:**
 ```kql
-| where not(AppName == "NSX" and (Message has "Accepts incoming connection from TN" or Message has "Finishes fullsync with TN"))
+| where not(AppName == "NSX" and (Message has "Accepts incoming connection from TN" or Message has "Finishes fullsync with TN" or Message has "Disconnected with TN"))
+| where not(AppName == "vmkbacktrace" and Message has "hostd-live")
 ```
 
 **Workbook visibility:** A dedicated **🔴 Customer-Actionable Emergency Events** panel applies the same exclusion alongside the unfiltered emergency event grid.
@@ -773,6 +783,8 @@ AVSSyslog
 | where not(AppName in ("clomd", "clomd-whatif"))
 | where not(AppName == "etcd" and Message has "purge snap")
 | where AppName != "esxcli"
+| where not(AppName == "NSX" and Message has "should resolve to the same FQDN")
+| where not(AppName == "NSX" and Message has "failure domain" and (Message has "are down" or Message has "are reachable"))
 | where not(Message has "your-other-noisy-pattern-here")
 | project TimeGenerated, HostName, AppName, Facility, Severity, Message
 ```
