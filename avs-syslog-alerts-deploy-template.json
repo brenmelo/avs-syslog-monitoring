@@ -123,6 +123,10 @@
       "type": "bool",
       "defaultValue": true
     },
+    "deployNsxFailureDomainDown": {
+      "type": "bool",
+      "defaultValue": true
+    },
     "deploySyslogIngestionHeartbeat": {
       "type": "bool",
       "defaultValue": true
@@ -178,7 +182,7 @@
       "condition": "[parameters('deploySev0Alert')]",
       "properties": {
         "displayName": "[format('{0}-Syslog-Sev0-Alert', parameters('alertNamePrefix'))]",
-        "description": "AVSSyslog Severity alert events",
+        "description": "AVSSyslog Severity alert events (excludes recoverable NSX failure-domain heartbeat chatter; sustained NSX FD outages are caught by the dedicated AVS-Event-NSX-FailureDomainDown alert)",
         "severity": 0,
         "enabled": true,
         "evaluationFrequency": "PT5M",
@@ -189,7 +193,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where Severity == \"alert\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "query": "AVSSyslog\n| where Severity == \"alert\"\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\"))\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,
@@ -598,6 +602,42 @@
         },
         "actions": {
           "actionGroups": "[variables('actionGroupsSev1')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-NSX-FailureDomainDown', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployNsxFailureDomainDown')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-NSX-FailureDomainDown', parameters('alertNamePrefix'))]",
+        "description": "One or more NSX failure domains went down and did not return reachable within 5 minutes. Bursts (e.g. mgmt-plane event) are collapsed into a single 1-minute window so each row = one event with FDsAffected count, sample failure domains, and longest outage. Transient NSX manager heartbeat blips are excluded.",
+        "severity": 0,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "let window = 15m;\nlet lookahead = 10m;\nAVSSyslog\n| where TimeGenerated > ago(window + lookahead)\n| where AppName == \"NSX\"\n| where Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\")\n| extend State = case(Message has \"are down\", \"Down\", Message has \"are reachable\", \"Up\", \"\")\n| extend FD = extract(@\"failure domain ([0-9a-f-]+)\", 1, Message)\n| where State != \"\" and FD != \"\"\n| sort by FD asc, TimeGenerated asc\n| extend NextState = next(State), NextTime = next(TimeGenerated), NextFD = next(FD)\n| where State == \"Down\"\n| where TimeGenerated > ago(window)\n| extend RecoveredAfter = iff(NextFD == FD and NextState == \"Up\", NextTime - TimeGenerated, timespan(null))\n| where isnull(RecoveredAfter) or RecoveredAfter > 5m\n| summarize FDsAffected = dcount(FD), SampleFDs = tostring(make_set(FD, 10)), MaxRecoveredAfter = max(RecoveredAfter) by BurstTime = bin(TimeGenerated, 1m)\n| where FDsAffected > 0\n| project BurstTime, FDsAffected, SampleFDs, MaxRecoveredAfter",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[variables('actionGroupsSev0')]"
         },
         "autoMitigate": true
       }

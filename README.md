@@ -420,6 +420,7 @@ Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** sect
 | Distributed Firewall Blocked | `AVS-Event-NSX-DFW-BlockedSpike` (threshold-based) | 2 (Warning) |
 | Host Maintenance Mode | `AVS-Event-Host-MaintenanceMode` | 2 (Warning) |
 | Role / Permission Changes | `AVS-Event-Security-RoleChange` | 1 (Error) |
+| (NSX failure-domain heartbeat — no panel; tuning only) | `AVS-Event-NSX-FailureDomainDown` (recovery-aware + burst-collapsed: only fires if NSX failure domain doesn't return reachable within 5 min; transient peer-heartbeat blips excluded; also excluded from `AVS-Syslog-Sev0-Alert`) | 0 (Critical) |
 
 > Event-specific alerts fire on **Message-field pattern matches**, regardless of the underlying syslog severity, so they're independent of the Part 1 severity-based rules.
 
@@ -742,6 +743,7 @@ With the default prefix `AVS`:
 | `deployDfwSpike` | bool | `true` | DFW Blocked Spike alert. |
 | `deployHostMaintenanceMode` | bool | `true` | Host Maintenance Mode alert. |
 | `deployRolePermissionChanges` | bool | `true` | Role/Permission Changes alert. |
+| `deployNsxFailureDomainDown` | bool | `true` | NSX failure-domain Down alert (recovery-aware, burst-collapsed). |
 | `deploySyslogIngestionHeartbeat` | bool | `true` | Syslog Ingestion Heartbeat alert. |
 
 ---
@@ -868,6 +870,43 @@ AVSSyslog
 ```
 
 **Workbook visibility:** The Part 2 **Host Events** panels show only `vpxd`-side events (Fdm peer chatter excluded), and a dedicated explanation panel describes the recovery-aware + burst-collapsing logic. A real outage where one or more hosts stay disconnected >5 minutes will still page Sev 0; a 60-host vCenter event produces a single alert row with `HostsAffected = 60`.
+
+### Excluded pattern (Sev 0 `AVS-Syslog-Sev0-Alert` catch-all) — NSX failure-domain heartbeat
+
+NSX manager nodes constantly heartbeat each other. When a peer misses ~3 heartbeats (a few seconds of jitter), NSX logs `All members of failure domain <id> are down` at syslog `alert` severity — then logs `... are reachable` as soon as heartbeats resume. **Both lines are tagged `alert`**, so a 30-second blip leaks into the broad Sev 0 catch-all and pages on what is almost always transient mgmt-plane jitter (frequently correlated with the same vCenter mgmt-plane events that trigger Host Connection Lost bursts).
+
+| AppName | Pattern | What it is |
+|---|---|---|
+| `NSX` | `All members of failure domain <id> are down` followed by `... are reachable` within seconds | NSX manager peer-heartbeat blip — transient, auto-recovers. |
+
+**Filter added to `AVS-Syslog-Sev0-Alert`:**
+```kql
+| where not(AppName == "NSX" and Message has "failure domain"
+            and Message has_any ("are down", "are reachable"))
+```
+
+**Real sustained NSX FD outages still page** — a dedicated `AVS-Event-NSX-FailureDomainDown` alert (Sev 0, recovery-aware + burst-collapsed, same pattern as Host-ConnectionLost) fires only when an FD goes down and does **not** return reachable within 5 minutes, and collapses simultaneous FDs into 1-minute windows (`FDsAffected`, `SampleFDs`, `MaxRecoveredAfter`).
+
+```kql
+let window = 15m;
+let lookahead = 10m;
+AVSSyslog
+| where TimeGenerated > ago(window + lookahead)
+| where AppName == "NSX"
+| where Message has "failure domain" and Message has_any ("are down", "are reachable")
+| extend State = case(Message has "are down", "Down",
+                      Message has "are reachable", "Up", "")
+| extend FD = extract(@"failure domain ([0-9a-f-]+)", 1, Message)
+| where State != "" and FD != ""
+| sort by FD asc, TimeGenerated asc
+| extend NextState = next(State), NextTime = next(TimeGenerated), NextFD = next(FD)
+| where State == "Down"
+| where TimeGenerated > ago(window)
+| extend RecoveredAfter = iff(NextFD == FD and NextState == "Up", NextTime - TimeGenerated, timespan(null))
+| where isnull(RecoveredAfter) or RecoveredAfter > 5m
+| summarize FDsAffected = dcount(FD), SampleFDs = tostring(make_set(FD, 10)), MaxRecoveredAfter = max(RecoveredAfter) by BurstTime = bin(TimeGenerated, 1m)
+| where FDsAffected > 0
+```
 
 ### Adding Custom Exclusions
 
