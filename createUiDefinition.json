@@ -116,7 +116,7 @@
           {
             "name": "actionGroupSev2",
             "type": "Microsoft.Solutions.ResourceSelector",
-            "label": "🟡 Action Group — Severity 2 (Error, DFW, Maintenance, Guest Reboot)",
+              "label": "🟡 Action Group — Severity 2 (DFW, Maintenance, Guest Reboot)",
             "toolTip": "Notified for moderate-priority alerts. Leave empty to skip.",
             "resourceType": "Microsoft.Insights/actionGroups",
             "visible": "[not(steps('notifications').useSameForAll)]",
@@ -174,7 +174,7 @@
             "options": {
               "icon": "Warning",
               "style": "Warning",
-              "text": "All Enabled preset — 14 of 14 alerts enabled (full coverage). Includes Sev 2 Error which can be noisy without tuned thresholds and exclusions."
+              "text": "All Enabled preset — 13 of 13 alerts enabled (full coverage)."
             }
           },
           {
@@ -198,7 +198,7 @@
             "type": "Microsoft.Common.TextBlock",
             "visible": "[equals(steps('alertSelection').alertPreset, 'All')]",
             "options": {
-              "text": "🟡 Sev 2 — Moderate (4):  ✅ Sev 2 Error  •  ✅ Host Maintenance Mode  •  ✅ VM Guest Reboot  •  ✅ DFW Blocked Spike"
+              "text": "🟡 Sev 2 — Moderate (3):  ✅ Host Maintenance Mode  •  ✅ VM Guest Reboot  •  ✅ DFW Blocked Spike"
             }
           },
           {
@@ -208,7 +208,7 @@
             "options": {
               "icon": "Info",
               "style": "Info",
-              "text": "Minimal preset — 5 of 14 alerts enabled. Sev 0 only: ideal for pilots or for proving out routing and action-group setup before enabling Sev 1 / Sev 2."
+              "text": "Minimal preset — 5 of 13 alerts enabled. Sev 0 only: ideal for pilots or for proving out routing and action-group setup before enabling Sev 1 / Sev 2."
             }
           },
           {
@@ -232,7 +232,7 @@
             "type": "Microsoft.Common.TextBlock",
             "visible": "[equals(steps('alertSelection').alertPreset, 'Minimal')]",
             "options": {
-              "text": "🟡 Sev 2 — Moderate (0):  ❌ Sev 2 Error  •  ❌ Host Maintenance Mode  •  ❌ VM Guest Reboot  •  ❌ DFW Blocked Spike"
+              "text": "🟡 Sev 2 — Moderate (0):  ❌ Host Maintenance Mode  •  ❌ VM Guest Reboot  •  ❌ DFW Blocked Spike"
             }
           },
           {
@@ -242,7 +242,7 @@
             "options": {
               "icon": "Info",
               "style": "Info",
-              "text": "Custom — The recommended set of alerts is pre-selected (12 of 14, with Sev 2 Error off by default). Toggle any checkbox below to fine-tune. Switch to All Enabled or Minimal above for one-click presets."
+              "text": "Custom — All 13 alerts are pre-selected. Toggle any checkbox below to fine-tune. Switch to All Enabled or Minimal above for one-click presets."
             }
           },
           {
@@ -268,12 +268,6 @@
                 "type": "Microsoft.Common.CheckBox",
                 "label": "🟠 Sev 1 — Critical (crit / critical) — default: ✅",
                 "defaultValue": true
-              },
-              {
-                "name": "deploySev2Error",
-                "type": "Microsoft.Common.CheckBox",
-                "label": "🟡 Sev 2 — Error (err / error) — default: ❌ (can be noisy)",
-                "defaultValue": false
               }
             ]
           },
@@ -386,32 +380,20 @@
           {
             "name": "infoBox",
             "type": "Microsoft.Common.InfoBox",
-            "visible": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), if(steps('alertSelection').severitySection.deploySev2Error, true, if(steps('alertSelection').eventSection.deployDnsFailures, true, steps('alertSelection').eventSection.deployDfwSpike)), false))]",
+            "visible": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), if(steps('alertSelection').eventSection.deployDnsFailures, true, steps('alertSelection').eventSection.deployDfwSpike), false))]",
             "options": {
-              "text": "These three alerts are volume-based — individual events are normal, but a spike indicates a problem. All other alerts in this solution fire on first occurrence (severity-based or discrete events like host shutdowns) and don't need a threshold. Thresholds apply per host per 15-minute evaluation window. See the README threshold-tuning guide for help adjusting these values. Only thresholds for alerts you've enabled are shown below.",
+              "text": "These two alerts are volume-based — individual events are normal, but a spike indicates a problem. All other alerts in this solution fire on first occurrence (severity-based or discrete events like host shutdowns) and don't need a threshold. Thresholds apply per host per 15-minute evaluation window. See the README threshold-tuning guide for help adjusting these values. Only thresholds for alerts you've enabled are shown below.",
               "style": "Info"
             }
           },
           {
             "name": "noThresholdsBox",
             "type": "Microsoft.Common.InfoBox",
-            "visible": "[if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), if(steps('alertSelection').severitySection.deploySev2Error, false, if(steps('alertSelection').eventSection.deployDnsFailures, false, not(steps('alertSelection').eventSection.deployDfwSpike))), false))]",
+            "visible": "[if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), if(steps('alertSelection').eventSection.deployDnsFailures, false, not(steps('alertSelection').eventSection.deployDfwSpike)), false))]",
             "options": {
               "text": "No threshold-based alerts are enabled in your selection — nothing to configure on this step. Click Next to continue to Review + create.",
               "style": "Info"
             }
-          },
-          {
-            "name": "errThresholdPer15m",
-            "type": "Microsoft.Common.Slider",
-            "visible": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Custom'), steps('alertSelection').severitySection.deploySev2Error, false))]",
-            "label": "Error events threshold (per 15 min)",
-            "subLabel": "events",
-            "defaultValue": 5,
-            "min": 1,
-            "max": 100,
-            "showStepMarkers": false,
-            "toolTip": "Number of err/error events per HostName + AppName in 15 minutes before alerting. Recommended baseline: 5 (default). Raise to 10–20 if you see frequent transient errors from a single AppName. Lower to 2–3 only for very stable environments."
           },
           {
             "name": "dnsFailureThresholdPer15m",
@@ -447,13 +429,11 @@
       "actionGroupIdSev0": "[if(empty(steps('notifications').actionGroupSev0.id), '', steps('notifications').actionGroupSev0.id)]",
       "actionGroupIdSev1": "[if(steps('notifications').useSameForAll, if(empty(steps('notifications').actionGroupSev0.id), '', steps('notifications').actionGroupSev0.id), if(empty(steps('notifications').actionGroupSev1.id), '', steps('notifications').actionGroupSev1.id))]",
       "actionGroupIdSev2": "[if(steps('notifications').useSameForAll, if(empty(steps('notifications').actionGroupSev0.id), '', steps('notifications').actionGroupSev0.id), if(empty(steps('notifications').actionGroupSev2.id), '', steps('notifications').actionGroupSev2.id))]",
-      "errThresholdPer15m": "[steps('thresholds').errThresholdPer15m]",
       "dnsFailureThresholdPer15m": "[steps('thresholds').dnsFailureThresholdPer15m]",
       "dfwSpikeThresholdPer15m": "[steps('thresholds').dfwSpikeThresholdPer15m]",
       "deploySev0Emergency": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').severitySection.deploySev0Emergency))]",
       "deploySev0Alert": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').severitySection.deploySev0Alert))]",
       "deploySev1Critical": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').severitySection.deploySev1Critical))]",
-      "deploySev2Error": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').severitySection.deploySev2Error))]",
       "deployHostConnectionLost": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deployHostConnectionLost))]",
       "deployHostShutdown": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), true, steps('alertSelection').eventSection.deployHostShutdown))]",
       "deployVmDisconnected": "[if(equals(steps('alertSelection').alertPreset, 'All'), true, if(equals(steps('alertSelection').alertPreset, 'Minimal'), false, steps('alertSelection').eventSection.deployVmDisconnected))]",

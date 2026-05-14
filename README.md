@@ -1,11 +1,11 @@
 # AVS Syslog Monitoring — Workbook & Alerts
 
-Pre-built Azure Monitor **Workbook** (~40 panels) and **14 syslog alert rules** for monitoring [Azure VMware Solution (AVS)](https://learn.microsoft.com/en-us/azure/azure-vmware/) — running against the `AVSSyslog` Log Analytics table.
+Pre-built Azure Monitor **Workbook** (~40 panels) and **13 syslog alert rules** for monitoring [Azure VMware Solution (AVS)](https://learn.microsoft.com/en-us/azure/azure-vmware/) — running against the `AVSSyslog` Log Analytics table.
 
 ### The core solution
 
 - **Workbook** — Severity distribution, per-severity drill-downs (Emergency/Alert/Critical/Error) with explanations and grouped Top Repeated Messages, event-specific views (host failures, VM changes, DNS, DFW, maintenance, role/permission changes), per-source health heatmap (ESXi / vCenter / NSX Manager / NSX Edge VM), and syslog ingestion pipeline health.
-- **14 alert rules** — Scheduled query alerts across three severity tiers:
+- **13 alert rules** — Scheduled query alerts across three severity tiers:
   - **Sev 0** — Emergency, Alert, host connection lost, host shutdown, syslog ingestion heartbeat
   - **Sev 1** — Critical, VM disconnected/removed, DNS failures, role & permission changes
   - **Sev 2** — Error, DFW spikes, host maintenance mode, VM guest reboots
@@ -157,7 +157,7 @@ If you deployed the workbook in Step 1, open it and click the **Deploy to Azure*
 3. A guided wizard walks you through:
    - **Basics** — Subscription, resource group, region, Log Analytics workspace.
    - **Action Groups** — Select existing action groups from dropdowns for Severity 0, 1, and 2 (leave empty to skip a tier).
-   - **Select Alerts** — Check or uncheck each of the 14 alert rules.
+   - **Select Alerts** — Check or uncheck each of the 13 alert rules.
    - **Thresholds** — Sliders for volume-based alerts (Error, DNS, DFW).
 4. Click **Review + create** → **Create**.
 
@@ -303,13 +303,13 @@ Syslog uses eight standard severity levels defined in [RFC 5424](https://datatra
 > | **Sev 0 Emergency** | `emerg` (0) — system unusable | `AVS-Syslog-Sev0-Emergency` | 0 (Critical) |
 > | **Sev 1 Alert** | `alert` (1) — immediate action required | `AVS-Syslog-Sev0-Alert` | 0 (Critical) |
 > | **Sev 2 Critical** | `crit` / `critical` (2) — critical conditions | `AVS-Syslog-Sev1-Critical` | 1 (Error) |
-> | **Sev 3 Error** | `err` / `error` (3) — error conditions | *(disabled by default — too noisy on AVS)* | 2 (Warning) when enabled |
+> | **Sev 3 Error** | `err` / `error` (3) — error conditions | *(not alerted — too noisy on AVS; visible in the workbook for forensics only)* | — |
 >
 > Each **Customer-Actionable** panel in the workbook applies the **same exclusions** as its corresponding alert rule, so what you see in the panel is exactly what would have triggered an alert. Raw/unfiltered panels keep every event for forensics.
 
-**Why only Severity 0–3?**
+**Why only Severity 0–2?**
 - Severity 0–2 events (`emerg`, `alert`, `crit`) are rare and almost always indicate a real problem — they should trigger immediate alerts.
-- Severity 3 (`err`/`error`) events are more common and can include routine errors. The Sev2-Error alert is **disabled by default** with a configurable threshold (default: 5 per host per 15 min) to avoid alert fatigue. Enable it only after reviewing your baseline.
+- Severity 3 (`err`/`error`) events are dominated by routine ESXi background chatter (hostd, vsand, localcli, osfsd, healthdPlugins, smartd, etc.) and almost never represent an actionable customer-side issue. No Sev 3 catch-all alert is deployed; genuine Error-level conditions worth paging on are covered by the event-specific rules in Part 2. Sev 3 remains visible in the workbook for forensics.
 - Severity 4–7 (`warning` through `debug`) generate high volume and are best monitored visually in the workbook rather than via alerts.
 
 In addition to severity-based alerts, this solution provides **10 event-specific alerts** (Part 2) that detect specific VMware events in the `Message` field — such as host failures, VM disconnections, DNS failures, and firewall blocks — regardless of what severity level they were logged at.
@@ -380,26 +380,6 @@ AVSSyslog
 ```
 
 > **Note:** The deployed alert rule automatically excludes platform noise from Microsoft-managed vSAN/control-plane components (`vsand`, `clomd`, `clomd-whatif`, `etcd`), Microsoft host-management tooling (`esxcli`), and NSX appliance/Edge VM platform messages (FQDN config check, Edge failure-domain heartbeat flap). See [Known Noisy Events](#-known-noisy-events--exclusion-filters) below.
-
-#### Sev2-Error (optional — can be noisy)
-
-| Property | Value |
-|---|---|
-| **Azure Severity** | 2 |
-| **Frequency** | Every 5 minutes |
-| **Lookback Window** | 15 minutes |
-| **Aggregation** | Count |
-| **Operator / Threshold** | Greater than 0 (query pre-filters at > 5 per HostName + AppName — configurable) |
-| **Default** | ❌ Disabled |
-
-```kql
-AVSSyslog
-| where Severity in ("err", "error")
-| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, 15m)
-| where ErrorCount > 5
-```
-
-> **Tip:** Adjust the `ErrorCount > 5` threshold to match your environment baseline. This alert is disabled by default to avoid noise.
 
 ---
 
@@ -687,13 +667,12 @@ Alerts are grouped into three severity tiers. Assign a different action group pe
 
 ## �️ Threshold Tuning Guide
 
-Only **3 of the 14 alerts** use thresholds — they are **volume-based** because individual events are normal but a *spike* indicates a problem. The other 11 alerts fire on first occurrence (severity-based or discrete events like host shutdowns) and don't need a threshold.
+Only **2 of the 13 alerts** use thresholds — they are **volume-based** because individual events are normal but a *spike* indicates a problem. The other 11 alerts fire on first occurrence (severity-based or discrete events like host shutdowns) and don't need a threshold.
 
-### Why only these 3?
+### Why only these 2?
 
 | Alert | Why it has a threshold |
 |---|---|
-| **Sev2-Error** | Single errors are common (transient hostd retries, brief network blips). Sustained errors from the same `HostName + AppName` combination indicate a real problem. |
 | **DNS Failures** | A single failed DNS query is normal (typo, scanner, expired cache). Many failures from one host = real DNS server issue. |
 | **DFW Blocked Spike** | The firewall blocking traffic *is its job*. A sudden surge above baseline = potential attack, scanning, or misconfigured app. |
 
@@ -703,7 +682,6 @@ All other alerts use threshold **= 0** (any occurrence fires) because the event 
 
 | Threshold | Default | Lower it (more sensitive) | Raise it (less noisy) |
 |---|---:|---|---|
-| **Error events / 15 min** | `5` | `2–3` for very stable environments where any error matters | `10–20` if you have a chatty AppName generating frequent transient errors |
 | **DNS failures / 15 min** | `10` | `5` for early warning of DNS server issues | `25–50` if your VMs frequently query non-existent records (security scanners, misconfigured apps, internal CDN lookups) |
 | **DFW blocks / 15 min** | `50` | `20` for security-sensitive workloads where any spike matters | `100–200` for high-traffic clusters or environments with deny-by-default policies |
 
@@ -746,7 +724,7 @@ With the default prefix `AVS`:
 |---|---|
 | `avs-syslog-workbook-deploy-template.json` | ARM template to deploy the workbook as an Azure resource. |
 | `avs-syslog-workbook-gallery.json` | Raw workbook JSON for manual import via the Advanced Editor. |
-| `avs-syslog-alerts-deploy-template.json` | ARM template with 14 Scheduled Query Rules and per-alert boolean toggles. |
+| `avs-syslog-alerts-deploy-template.json` | ARM template with 13 Scheduled Query Rules and per-alert boolean toggles. |
 | `createUiDefinition.json` | Custom portal UI for the alert deployment wizard (resource pickers, sliders). |
 | `avs-service-health-alert-template.json` | ARM template for Azure Service Health alerts filtered to Azure VMware Solution. |
 | `createUiDefinition-service-health.json` | Custom portal UI for the Service Health deployment (action group picker). |
@@ -762,13 +740,11 @@ With the default prefix `AVS`:
 | `actionGroupIdSev0` | string | `""` | Action group for Severity 0 alerts. |
 | `actionGroupIdSev1` | string | `""` | Action group for Severity 1 alerts. |
 | `actionGroupIdSev2` | string | `""` | Action group for Severity 2 alerts. |
-| `errThresholdPer15m` | int | `5` | Error threshold per HostName + AppName per 15 min. |
 | `dnsFailureThresholdPer15m` | int | `10` | DNS failure threshold per host per 15 min. |
 | `dfwSpikeThresholdPer15m` | int | `50` | DFW blocked traffic threshold per host per 15 min. |
 | `deploySev0Emergency` | bool | `true` | Deploy the Emergency alert. |
 | `deploySev0Alert` | bool | `true` | Deploy the Alert-severity alert. |
 | `deploySev1Critical` | bool | `true` | Deploy the Critical alert. |
-| `deploySev2Error` | bool | `false` | Deploy the Error alert (noisy — baseline first). |
 | `deployHostConnectionLost` | bool | `true` | Host Connection Lost alert. |
 | `deployHostShutdown` | bool | `true` | Host Shutdown alert. |
 | `deployVmDisconnected` | bool | `true` | VM Disconnected alert. |

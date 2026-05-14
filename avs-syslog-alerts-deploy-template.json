@@ -43,16 +43,8 @@
       "type": "string",
       "defaultValue": "",
       "metadata": {
-        "description": "Action group for Sev 2 alerts (Error, DFW, Maintenance, Guest Reboot).",
+        "description": "Action group for Sev 2 alerts (DFW, Maintenance, Guest Reboot).",
         "strongType": "Microsoft.Insights/actionGroups"
-      }
-    },
-    "errThresholdPer15m": {
-      "type": "int",
-      "defaultValue": 5,
-      "minValue": 1,
-      "metadata": {
-        "description": "Threshold for Severity 3 err/error alert (per HostName+AppName in 15 minutes)."
       }
     },
     "dnsFailureThresholdPer15m": {
@@ -82,10 +74,6 @@
     "deploySev1Critical": {
       "type": "bool",
       "defaultValue": true
-    },
-    "deploySev2Error": {
-      "type": "bool",
-      "defaultValue": false
     },
     "deployHostConnectionLost": {
       "type": "bool",
@@ -257,43 +245,8 @@
     {
       "type": "Microsoft.Insights/scheduledQueryRules",
       "apiVersion": "2023-12-01",
-      "name": "[format('{0}-Syslog-Sev2-Error', parameters('alertNamePrefix'))]",
-      "location": "[parameters('location')]",
-      "condition": "[parameters('deploySev2Error')]",
-      "properties": {
-        "displayName": "[format('{0}-Syslog-Sev2-Error', parameters('alertNamePrefix'))]",
-        "description": "AVSSyslog Severity err/error above threshold",
-        "severity": 2,
-        "enabled": true,
-        "evaluationFrequency": "PT5M",
-        "windowSize": "PT15M",
-        "scopes": [
-          "[parameters('workspaceResourceId')]"
-        ],
-        "criteria": {
-          "allOf": [
-            {
-              "query": "[concat('AVSSyslog\n| where Severity in (\"err\", \"error\")\n| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, 15m)\n| where ErrorCount > ', string(parameters('errThresholdPer15m')))]",
-              "timeAggregation": "Count",
-              "operator": "GreaterThan",
-              "threshold": 0,
-              "failingPeriods": {
-                "numberOfEvaluationPeriods": 1,
-                "minFailingPeriodsToAlert": 1
-              }
-            }
-          ]
-        },
-        "actions": {
-          "actionGroups": "[variables('actionGroupsSev2')]"
-        },
-        "autoMitigate": true
-      }
-    },
-    {
-      "type": "Microsoft.Insights/scheduledQueryRules",
-      "apiVersion": "2023-12-01",
       "name": "[format('{0}-Event-Host-ConnectionLost', parameters('alertNamePrefix'))]",
+
       "location": "[parameters('location')]",
       "condition": "[parameters('deployHostConnectionLost')]",
       "properties": {
