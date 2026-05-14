@@ -442,19 +442,30 @@ Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** sect
 
 ```kql
 let window = 15m;
-let lost = AVSSyslog
-| where AppName == "vpxd" and Message has "HostConnectionLostEvent"
-| extend Host = extract(@"Host (\S+) in", 1, Message)
-| project LostTime = TimeGenerated, Host;
-let connected = AVSSyslog
-| where AppName == "vpxd" and Message has "HostConnectedEvent"
-| extend Host = extract(@"Connected to (\S+) in", 1, Message)
-| project ConnTime = TimeGenerated, Host;
-lost
-| join kind=leftouter connected on Host
-| where isnull(ConnTime) or ConnTime < LostTime or (ConnTime - LostTime) > 5m
-| project TimeGenerated = LostTime, Host, RecoveredAfter = iff(isnull(ConnTime), timespan(null), ConnTime - LostTime)
+let lookahead = 10m;
+AVSSyslog
+| where TimeGenerated > ago(window + lookahead)
+| where AppName == "vpxd"
+| where Message has_any ("HostConnectionLostEvent", "HostConnectedEvent")
+| extend EventType = case(
+    Message has "HostConnectionLostEvent", "Lost",
+    Message has "HostConnectedEvent",      "Conn",
+    "")
+| extend Host = case(
+    EventType == "Lost", extract(@"Host (\S+) in",       1, Message),
+    EventType == "Conn", extract(@"Connected to (\S+) in", 1, Message),
+    "")
+| where Host != ""
+| sort by Host asc, TimeGenerated asc
+| extend NextType = next(EventType), NextTime = next(TimeGenerated), NextHost = next(Host)
+| where EventType == "Lost"
+| where TimeGenerated > ago(window)
+| extend RecoveredAfter = iff(NextHost == Host and NextType == "Conn", NextTime - TimeGenerated, timespan(null))
+| where isnull(RecoveredAfter) or RecoveredAfter > 5m
+| project TimeGenerated, Host, RecoveredAfter
 ```
+
+> Single-pass, sorted-by-host approach — avoids the Cartesian-product blow-up of a `lost | join connected on Host` pattern (which can produce N×M intermediate rows per host and trigger Log Analytics resource warnings).
 
 #### Host-Shutdown
 
@@ -830,17 +841,25 @@ A naive `Message has "lost connection to the host"` query catches **two very dif
 - All `Fdm` "Lost connection to the host agent" messages are HA peer chatter (every host logs it about every other host). Treating them as Sev 0 events would generate dozens of duplicate pages per blip.
 - Sub-5-minute disconnect/reconnect pairs are a normal AVS operational pattern — Microsoft handles them transparently.
 
-**Filter used in the Sev0 `AVS-Event-Host-ConnectionLost` alert (recovery-aware):**
+**Filter used in the Sev0 `AVS-Event-Host-ConnectionLost` alert (recovery-aware, single-pass):**
 ```kql
-let lost = AVSSyslog | where AppName == "vpxd" and Message has "HostConnectionLostEvent"
-| extend Host = extract(@"Host (\S+) in", 1, Message)
-| project LostTime = TimeGenerated, Host;
-let connected = AVSSyslog | where AppName == "vpxd" and Message has "HostConnectedEvent"
-| extend Host = extract(@"Connected to (\S+) in", 1, Message)
-| project ConnTime = TimeGenerated, Host;
-lost
-| join kind=leftouter connected on Host
-| where isnull(ConnTime) or ConnTime < LostTime or (ConnTime - LostTime) > 5m
+let window = 15m;
+let lookahead = 10m;
+AVSSyslog
+| where TimeGenerated > ago(window + lookahead)
+| where AppName == "vpxd"
+| where Message has_any ("HostConnectionLostEvent", "HostConnectedEvent")
+| extend EventType = case(Message has "HostConnectionLostEvent", "Lost",
+                          Message has "HostConnectedEvent",      "Conn", "")
+| extend Host = case(EventType == "Lost", extract(@"Host (\S+) in", 1, Message),
+                     EventType == "Conn", extract(@"Connected to (\S+) in", 1, Message), "")
+| where Host != ""
+| sort by Host asc, TimeGenerated asc
+| extend NextType = next(EventType), NextTime = next(TimeGenerated), NextHost = next(Host)
+| where EventType == "Lost"
+| where TimeGenerated > ago(window)
+| extend RecoveredAfter = iff(NextHost == Host and NextType == "Conn", NextTime - TimeGenerated, timespan(null))
+| where isnull(RecoveredAfter) or RecoveredAfter > 5m
 ```
 
 **Workbook visibility:** The Part 2 **Host Events** panels show only `vpxd`-side events (Fdm peer chatter excluded), and a dedicated explanation panel describes the recovery-aware logic. A real outage where a host stays disconnected >5 minutes will still page Sev 0.
