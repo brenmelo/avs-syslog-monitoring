@@ -236,6 +236,75 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
+        "query": "// Same exclusion logic as the deployed AVS-Syslog-Sev0-Emergency / Sev0-Alert / Sev1-Critical / Sev2-Error rules.\nlet errThreshold = 5;\nlet sev0 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\" or Message has \"Disconnected with TN\"))\n| where not(AppName == \"vmkbacktrace\" and Message has \"hostd-live\")\n| summarize Count = count()\n| extend SeverityGroup = \"\ud83d\udd34 Emergency (Sev 0)\";\nlet sev1 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\"))\n| where not(AppName == \"NSX\" and Message has \"ESX Agent Manager (EAM) service\" and Message has_any (\"is down\", \"is either up\"))\n| where not(AppName == \"sudo\" and Message has_any (\"Account or password is expired\", \"unable to change expired password\", \"Authentication token manipulation error\"))\n| summarize Count = count()\n| extend SeverityGroup = \"\ud83d\udfe0 Alert (Sev 1)\";\nlet sev2 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| where not(AppName == \"NSX\" and Message has \"should resolve to the same FQDN\")\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and (Message has \"are down\" or Message has \"are reachable\"))\n| summarize Count = count()\n| extend SeverityGroup = \"\ud83d\udfe1 Critical (Sev 2)\";\nlet sev3 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"err\", \"error\")\n| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, 15m)\n| where ErrorCount > errThreshold\n| summarize Count = sum(ErrorCount)\n| extend SeverityGroup = \"\u26aa Error (Sev 3)\";\nlet defaults = datatable(SeverityGroup:string, Count:long) [\n    \"\ud83d\udd34 Emergency (Sev 0)\", 0,\n    \"\ud83d\udfe0 Alert (Sev 1)\", 0,\n    \"\ud83d\udfe1 Critical (Sev 2)\", 0,\n    \"\u26aa Error (Sev 3)\", 0\n];\nunion sev0, sev1, sev2, sev3, defaults\n| summarize Count = sum(Count) by SeverityGroup\n| extend Status = iff(Count == 0, \"\ud83d\udfe2 HEALTHY\", \"\ud83d\udd34 alertable\")\n| extend SortOrder = case(SeverityGroup == \"\ud83d\udd34 Emergency (Sev 0)\", 0, SeverityGroup == \"\ud83d\udfe0 Alert (Sev 1)\", 1, SeverityGroup == \"\ud83d\udfe1 Critical (Sev 2)\", 2, SeverityGroup == \"\u26aa Error (Sev 3)\", 3, 99)\n| order by SortOrder asc\n| project SeverityGroup, Count, Status",
+        "size": 3,
+        "title": "Alertable Severity Volume (0\u20133) \u2014 after deployed exclusions / thresholds",
+        "queryType": 0,
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": {
+            "columnMatch": "SeverityGroup",
+            "formatter": 1
+          },
+          "leftContent": {
+            "columnMatch": "Count",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "redBright",
+              "thresholdsOptions": "colors",
+              "thresholdsGrid": [
+                {
+                  "operator": "==",
+                  "thresholdValue": "0",
+                  "representation": "green",
+                  "text": ""
+                },
+                {
+                  "operator": ">",
+                  "thresholdValue": "100",
+                  "representation": "redBright",
+                  "text": ""
+                },
+                {
+                  "operator": ">",
+                  "thresholdValue": "10",
+                  "representation": "orange",
+                  "text": ""
+                },
+                {
+                  "operator": "Default",
+                  "thresholdValue": null,
+                  "representation": "yellow",
+                  "text": ""
+                }
+              ]
+            },
+            "numberFormat": {
+              "unit": 0,
+              "options": {
+                "style": "decimal",
+                "maximumFractionDigits": 0
+              }
+            }
+          },
+          "secondaryContent": {
+            "columnMatch": "Status",
+            "formatter": 1
+          },
+          "showBorder": true,
+          "size": "auto"
+        },
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "Severity-tiles-alertable"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
         "query": "union isfuzzy=true AVSSyslog, (datatable(TimeGenerated:datetime, HostName:string, AppName:string, Facility:string, Severity:string, Message:string, ProcId:string)[])\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| summarize Count = count() by Severity\n| order by case(\n    Severity == \"emerg\", 0,\n    Severity == \"emergency\", 0,\n    Severity == \"alert\", 1,\n    Severity == \"crit\", 2,\n    Severity == \"critical\", 2,\n    Severity == \"err\", 3,\n    Severity == \"error\", 3,\n    Severity == \"warning\", 4,\n    Severity == \"notice\", 5,\n    Severity == \"info\", 6,\n    Severity == \"debug\", 7,\n    99\n  ) asc",
         "size": 1,
         "title": "Full Severity Distribution (all levels)",
