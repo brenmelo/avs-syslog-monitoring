@@ -421,6 +421,8 @@ Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** sect
 | Host Maintenance Mode | `AVS-Event-Host-MaintenanceMode` | 2 (Warning) |
 | Role / Permission Changes | `AVS-Event-Security-RoleChange` | 1 (Error) |
 | (NSX failure-domain heartbeat — no panel; tuning only) | `AVS-Event-NSX-FailureDomainDown` (recovery-aware + burst-collapsed: only fires if NSX failure domain doesn't return reachable within 5 min; transient peer-heartbeat blips excluded; also excluded from `AVS-Syslog-Sev0-Alert`) | 0 (Critical) |
+| (NSX EAM service — no panel; tuning only) | `AVS-Event-NSX-EAMServiceDown` (recovery-aware + burst-collapsed: only fires if NSX EAM service doesn't return up within 5 min; NSX manager peer chatter excluded; also excluded from `AVS-Syslog-Sev0-Alert`) | 0 (Critical) |
+| (Sudo expired-credential loop — no panel; tuning only) | `AVS-Event-Host-SudoExpiredCredential` (per-host hourly digest of >5 sudo expired-password attempts; flags Microsoft-managed credential rotation issues; raw `sudo` expired-password lines excluded from `AVS-Syslog-Sev0-Alert`) | 2 (Warning) |
 
 > Event-specific alerts fire on **Message-field pattern matches**, regardless of the underlying syslog severity, so they're independent of the Part 1 severity-based rules.
 
@@ -744,6 +746,8 @@ With the default prefix `AVS`:
 | `deployHostMaintenanceMode` | bool | `true` | Host Maintenance Mode alert. |
 | `deployRolePermissionChanges` | bool | `true` | Role/Permission Changes alert. |
 | `deployNsxFailureDomainDown` | bool | `true` | NSX failure-domain Down alert (recovery-aware, burst-collapsed). |
+| `deployNsxEamServiceDown` | bool | `true` | NSX EAM service Down alert (recovery-aware, burst-collapsed). |
+| `deployHostSudoExpiredCredential` | bool | `true` | Host sudo expired-credential digest alert (Sev 2, hourly per host). |
 | `deploySyslogIngestionHeartbeat` | bool | `true` | Syslog Ingestion Heartbeat alert. |
 
 ---
@@ -906,6 +910,49 @@ AVSSyslog
 | where isnull(RecoveredAfter) or RecoveredAfter > 5m
 | summarize FDsAffected = dcount(FD), SampleFDs = tostring(make_set(FD, 10)), MaxRecoveredAfter = max(RecoveredAfter) by BurstTime = bin(TimeGenerated, 1m)
 | where FDsAffected > 0
+```
+
+### Excluded patterns (Sev 0 `AVS-Syslog-Sev0-Alert` catch-all) — NSX EAM + sudo expired-credential
+
+Two additional `alert`-tagged patterns commonly leak into the Sev 0 catch-all in AVS environments and are tuned the same way as NSX failure-domain.
+
+#### NSX EAM service flapping
+
+| AppName | Pattern | What it is |
+|---|---|---|
+| `NSX` | `ESX Agent Manager (EAM) service on compute manager <id> is down` followed by `... is either up or compute manager <id> has been removed` within minutes | NSX manager peer (APP01/02/03) reports a brief EAM connectivity blip with vCenter — transient, auto-recovers. Each peer logs independently, so a 3-6 min blip = 4-6 `alert` rows. |
+
+**Filter added to `AVS-Syslog-Sev0-Alert`:**
+```kql
+| where not(AppName == "NSX" and Message has "ESX Agent Manager (EAM) service"
+            and Message has_any ("is down", "is either up"))
+```
+
+**Real sustained EAM outages still page** — dedicated `AVS-Event-NSX-EAMServiceDown` alert (Sev 0, recovery-aware + burst-collapsed) fires only when EAM doesn't return up within 5 minutes, with `CMsAffected`, `SampleCMs`, `MaxRecoveredAfter`.
+
+#### Sudo expired-credential loop
+
+| AppName | Pattern | What it is |
+|---|---|---|
+| `sudo` | `Account or password is expired, reset your password and try again` followed by `unable to change expired password: Authentication token manipulation error`, repeating every ~60s on the same host | A Microsoft-managed monitoring agent (typically polling `netstat`) is running into an expired root credential on a single host. Two `alert` lines per minute, indefinitely. **Customer cannot fix — Microsoft must rotate the credential.** |
+
+**Filter added to `AVS-Syslog-Sev0-Alert`:**
+```kql
+| where not(AppName == "sudo" and Message has_any (
+              "Account or password is expired",
+              "unable to change expired password",
+              "Authentication token manipulation error"))
+```
+
+**Customer is still notified, but actionably:** dedicated `AVS-Event-Host-SudoExpiredCredential` alert (Sev 2, **PT1H frequency, PT1H window**) fires at most once per host per hour when >5 such attempts are seen, surfacing the affected `HostName` so the customer can open a Microsoft support ticket for that host.
+
+```kql
+AVSSyslog
+| where AppName == "sudo"
+| where Message has "Account or password is expired"
+| summarize FailedAttempts = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by HostName
+| where FailedAttempts > 5
+| project HostName, FailedAttempts, FirstSeen, LastSeen, Note = "Likely Microsoft-managed credential rotation issue — open a support ticket for this host"
 ```
 
 ### Adding Custom Exclusions

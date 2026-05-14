@@ -127,6 +127,14 @@
       "type": "bool",
       "defaultValue": true
     },
+    "deployNsxEamServiceDown": {
+      "type": "bool",
+      "defaultValue": true
+    },
+    "deployHostSudoExpiredCredential": {
+      "type": "bool",
+      "defaultValue": true
+    },
     "deploySyslogIngestionHeartbeat": {
       "type": "bool",
       "defaultValue": true
@@ -182,7 +190,7 @@
       "condition": "[parameters('deploySev0Alert')]",
       "properties": {
         "displayName": "[format('{0}-Syslog-Sev0-Alert', parameters('alertNamePrefix'))]",
-        "description": "AVSSyslog Severity alert events (excludes recoverable NSX failure-domain heartbeat chatter; sustained NSX FD outages are caught by the dedicated AVS-Event-NSX-FailureDomainDown alert)",
+        "description": "AVSSyslog Severity alert events (excludes recoverable NSX failure-domain heartbeat chatter, NSX EAM service flapping, and Microsoft-managed sudo expired-credential loops; sustained outages are caught by the dedicated AVS-Event-NSX-FailureDomainDown / NSX-EAMServiceDown / Host-SudoExpiredCredential alerts)",
         "severity": 0,
         "enabled": true,
         "evaluationFrequency": "PT5M",
@@ -193,7 +201,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where Severity == \"alert\"\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\"))\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "query": "AVSSyslog\n| where Severity == \"alert\"\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\"))\n| where not(AppName == \"NSX\" and Message has \"ESX Agent Manager (EAM) service\" and Message has_any (\"is down\", \"is either up\"))\n| where not(AppName == \"sudo\" and Message has_any (\"Account or password is expired\", \"unable to change expired password\", \"Authentication token manipulation error\"))\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,
@@ -638,6 +646,78 @@
         },
         "actions": {
           "actionGroups": "[variables('actionGroupsSev0')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-NSX-EAMServiceDown', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployNsxEamServiceDown')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-NSX-EAMServiceDown', parameters('alertNamePrefix'))]",
+        "description": "NSX ESX Agent Manager (EAM) service on a compute manager went down and did not return up within 5 minutes. Bursts (e.g. NSX manager peers reporting the same outage) are collapsed into a single 1-minute window. Transient EAM heartbeat blips are excluded.",
+        "severity": 0,
+        "enabled": true,
+        "evaluationFrequency": "PT5M",
+        "windowSize": "PT15M",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "let window = 15m;\nlet lookahead = 10m;\nAVSSyslog\n| where TimeGenerated > ago(window + lookahead)\n| where AppName == \"NSX\"\n| where Message has \"ESX Agent Manager (EAM) service\" and Message has_any (\"is down\", \"is either up\")\n| extend State = case(Message has \"is down\", \"Down\", Message has \"is either up\", \"Up\", \"\")\n| extend CM = extract(@\"compute manager ([0-9a-f-]+)\", 1, Message)\n| where State != \"\" and CM != \"\"\n| sort by CM asc, TimeGenerated asc\n| extend NextState = next(State), NextTime = next(TimeGenerated), NextCM = next(CM)\n| where State == \"Down\"\n| where TimeGenerated > ago(window)\n| extend RecoveredAfter = iff(NextCM == CM and NextState == \"Up\", NextTime - TimeGenerated, timespan(null))\n| where isnull(RecoveredAfter) or RecoveredAfter > 5m\n| summarize CMsAffected = dcount(CM), SampleCMs = tostring(make_set(CM, 10)), MaxRecoveredAfter = max(RecoveredAfter) by BurstTime = bin(TimeGenerated, 1m)\n| where CMsAffected > 0\n| project BurstTime, CMsAffected, SampleCMs, MaxRecoveredAfter",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[variables('actionGroupsSev0')]"
+        },
+        "autoMitigate": true
+      }
+    },
+    {
+      "type": "Microsoft.Insights/scheduledQueryRules",
+      "apiVersion": "2023-12-01",
+      "name": "[format('{0}-Event-Host-SudoExpiredCredential', parameters('alertNamePrefix'))]",
+      "location": "[parameters('location')]",
+      "condition": "[parameters('deployHostSudoExpiredCredential')]",
+      "properties": {
+        "displayName": "[format('{0}-Event-Host-SudoExpiredCredential', parameters('alertNamePrefix'))]",
+        "description": "One or more hosts have a chronic sudo expired-password loop (>5 attempts in 1 hour). This is almost always a Microsoft-managed credential rotation issue on a single host — open a Microsoft support ticket for the affected HostName(s). Fires at most once per host per hour.",
+        "severity": 2,
+        "enabled": true,
+        "evaluationFrequency": "PT1H",
+        "windowSize": "PT1H",
+        "scopes": [
+          "[parameters('workspaceResourceId')]"
+        ],
+        "criteria": {
+          "allOf": [
+            {
+              "query": "AVSSyslog\n| where AppName == \"sudo\"\n| where Message has \"Account or password is expired\"\n| summarize FailedAttempts = count(), FirstSeen = min(TimeGenerated), LastSeen = max(TimeGenerated) by HostName\n| where FailedAttempts > 5\n| project HostName, FailedAttempts, FirstSeen, LastSeen, Note = \"Likely Microsoft-managed credential rotation issue — open a support ticket for this host\"",
+              "timeAggregation": "Count",
+              "operator": "GreaterThan",
+              "threshold": 0,
+              "failingPeriods": {
+                "numberOfEvaluationPeriods": 1,
+                "minFailingPeriodsToAlert": 1
+              }
+            }
+          ]
+        },
+        "actions": {
+          "actionGroups": "[variables('actionGroupsSev2')]"
         },
         "autoMitigate": true
       }
