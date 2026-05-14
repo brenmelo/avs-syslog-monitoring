@@ -357,6 +357,50 @@
       "name": "section-part1"
     },
     {
+      "type": 1,
+      "content": {
+        "json": "#### Alert Preview \u2014 what the Sev catch-all alerts would have caught in this time range\n\nRuns the **same exclusions and thresholds** as the deployed `AVS-Syslog-Sev0-Emergency` / `Sev0-Alert` / `Sev1-Critical` / `Sev2-Error` rules against the workbook's selected TimeRange and HostFilter. `Sev2-Error` is threshold-based (`> errThresholdPer15m` errors per host per 15-min bucket) and reports the **number of buckets that would have triggered** \u2014 i.e. the number of times that alert would have fired."
+      },
+      "name": "sev-alert-preview-explanation"
+    },
+    {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Defaults match avs-syslog-alerts-deploy-template.json parameters; override here if your deployment uses different values.\nlet errThreshold = 5;\nlet s1 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\" or Message has \"Disconnected with TN\"))\n| where not(AppName == \"vmkbacktrace\" and Message has \"hostd-live\")\n| count\n| extend Alert = \"AVS-Syslog-Sev0-Emergency\", Sev = \"0\", Logic = \"Severity emerg/emergency (NSX TN connection lifecycle + vmkbacktrace hostd-live excluded)\";\nlet s2 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\"))\n| where not(AppName == \"NSX\" and Message has \"ESX Agent Manager (EAM) service\" and Message has_any (\"is down\", \"is either up\"))\n| where not(AppName == \"sudo\" and Message has_any (\"Account or password is expired\", \"unable to change expired password\", \"Authentication token manipulation error\"))\n| count\n| extend Alert = \"AVS-Syslog-Sev0-Alert\", Sev = \"0\", Logic = \"Severity alert (NSX failure-domain heartbeat, NSX EAM flap, sudo expired-credential excluded)\";\nlet s3 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| where not(AppName == \"NSX\" and Message has \"should resolve to the same FQDN\")\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and (Message has \"are down\" or Message has \"are reachable\"))\n| count\n| extend Alert = \"AVS-Syslog-Sev1-Critical\", Sev = \"1\", Logic = \"Severity crit/critical (vsand stats, clomd, etcd snap, esxcli, NSX FQDN/FD chatter excluded)\";\nlet s4 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"err\", \"error\")\n| summarize ErrorCount = count() by HostName, AppName, bin(TimeGenerated, 15m)\n| where ErrorCount > errThreshold\n| count\n| extend Alert = \"AVS-Syslog-Sev2-Error\", Sev = \"2\", Logic = strcat(\">\", errThreshold, \" err/error events per host+app per 15m bucket\");\nunion s1, s2, s3, s4\n| project Alert, Sev, MatchingEvents = Count, WouldFire = iff(Count > 0, \"\ud83d\udd34 YES\", \"\ud83d\udfe2 No\"), Logic\n| order by toint(Sev) asc, MatchingEvents desc",
+        "size": 1,
+        "title": "Alert Preview \u2014 Sev catch-all rules matching deployed logic in selected TimeRange",
+        "noDataMessage": "\ud83d\udfe2 HEALTHY \u2014 none of the Part 1 Sev catch-all alerts would have fired in this time range.",
+        "queryType": 0,
+        "visualization": "table",
+        "gridSettings": {
+          "formatters": [
+            {
+              "formatter": 11,
+              "columnMatch": "Sev"
+            },
+            {
+              "formatOptions": {
+                "palette": "greenRed"
+              },
+              "columnMatch": "MatchingEvents",
+              "formatter": 8
+            },
+            {
+              "formatter": 1,
+              "columnMatch": "WouldFire"
+            }
+          ]
+        },
+        "showExportToExcel": true,
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "sev-alert-preview-grid"
+    },
+    {
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
