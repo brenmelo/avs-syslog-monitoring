@@ -411,7 +411,7 @@ Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** sect
 
 | Workbook panel | Alert rule | Azure Monitor Sev |
 |---|---|---|
-| Host Events (HostConnectionLost) | `AVS-Event-Host-ConnectionLost` (recovery-aware: only fires if host doesn't reconnect within 5 min; Fdm peer chatter excluded) | 0 (Critical) |
+| Host Events (HostConnectionLost) | `AVS-Event-Host-ConnectionLost` (recovery-aware + burst-collapsed: only fires if host doesn't reconnect within 5 min; bursts are summarized into 1-min windows so each row = one event with `HostsAffected` count, sample hosts, and longest outage; Fdm peer chatter excluded) | 0 (Critical) |
 | Host Events (HostShutdownEvent) | `AVS-Event-Host-Shutdown` | 0 (Critical) |
 | VM Disconnected | `AVS-Event-VM-Disconnected` (excludes vSAN health-check noise) | 1 (Error) |
 | VM Removed from Inventory | `AVS-Event-VM-RemovedFromInventory` (excludes vSAN health-check noise) | 1 (Error) |
@@ -434,11 +434,12 @@ Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** sect
 | **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
-> **Recovery-aware (Option 2):** A naive `Message has "lost connection to the host"` query is *extremely* noisy in AVS:
+> **Recovery-aware + burst-collapsed (Option 2 + B):** A naive `Message has "lost connection to the host"` query is *extremely* noisy in AVS:
 > 1. Every peer ESXi host's `Fdm` (vSphere HA) agent logs `Lost connection to the host agent` whenever any host blips — one transient event in an 80-host cluster generates ~70 log lines.
 > 2. AVS hosts routinely disconnect for 10–60 seconds (Microsoft-managed maintenance, vSAN health checks, transient network jitter) and immediately reconnect.
+> 3. A vCenter-side event (vpxd restart, mgmt-network blip) disconnects every host in inventory at the same instant — without burst-collapsing this would page once per host.
 >
-> This query filters both: it matches only `vpxd`'s `HostConnectionLostEvent` and only fires when the corresponding `HostConnectedEvent` for the same host is missing or arrives more than 5 minutes later.
+> This query filters all three: it matches only `vpxd`'s `HostConnectionLostEvent`, only fires when the corresponding `HostConnectedEvent` for the same host is missing or arrives more than 5 minutes later, and **collapses simultaneous disconnects into 1-minute burst windows** so each alert row = one event (with `HostsAffected`, `SampleHosts`, `MaxRecoveredAfter`).
 
 ```kql
 let window = 15m;
@@ -462,10 +463,12 @@ AVSSyslog
 | where TimeGenerated > ago(window)
 | extend RecoveredAfter = iff(NextHost == Host and NextType == "Conn", NextTime - TimeGenerated, timespan(null))
 | where isnull(RecoveredAfter) or RecoveredAfter > 5m
-| project TimeGenerated, Host, RecoveredAfter
+| summarize HostsAffected = dcount(Host), SampleHosts = tostring(make_set(Host, 10)), MaxRecoveredAfter = max(RecoveredAfter) by BurstTime = bin(TimeGenerated, 1m)
+| where HostsAffected > 0
+| project BurstTime, HostsAffected, SampleHosts, MaxRecoveredAfter
 ```
 
-> Single-pass, sorted-by-host approach — avoids the Cartesian-product blow-up of a `lost | join connected on Host` pattern (which can produce N×M intermediate rows per host and trigger Log Analytics resource warnings).
+> Single-pass, sorted-by-host approach — avoids the Cartesian-product blow-up of a `lost | join connected on Host` pattern (which can produce N×M intermediate rows per host and trigger Log Analytics resource warnings). Final `summarize ... by bin(TimeGenerated, 1m)` collapses mass-disconnect bursts (e.g. a vCenter restart hitting 60 hosts at the same millisecond) into a single alert row.
 
 #### Host-Shutdown
 
@@ -841,7 +844,7 @@ A naive `Message has "lost connection to the host"` query catches **two very dif
 - All `Fdm` "Lost connection to the host agent" messages are HA peer chatter (every host logs it about every other host). Treating them as Sev 0 events would generate dozens of duplicate pages per blip.
 - Sub-5-minute disconnect/reconnect pairs are a normal AVS operational pattern — Microsoft handles them transparently.
 
-**Filter used in the Sev0 `AVS-Event-Host-ConnectionLost` alert (recovery-aware, single-pass):**
+**Filter used in the Sev0 `AVS-Event-Host-ConnectionLost` alert (recovery-aware + burst-collapsed, single-pass):**
 ```kql
 let window = 15m;
 let lookahead = 10m;
@@ -860,9 +863,11 @@ AVSSyslog
 | where TimeGenerated > ago(window)
 | extend RecoveredAfter = iff(NextHost == Host and NextType == "Conn", NextTime - TimeGenerated, timespan(null))
 | where isnull(RecoveredAfter) or RecoveredAfter > 5m
+| summarize HostsAffected = dcount(Host), SampleHosts = tostring(make_set(Host, 10)), MaxRecoveredAfter = max(RecoveredAfter) by BurstTime = bin(TimeGenerated, 1m)
+| where HostsAffected > 0
 ```
 
-**Workbook visibility:** The Part 2 **Host Events** panels show only `vpxd`-side events (Fdm peer chatter excluded), and a dedicated explanation panel describes the recovery-aware logic. A real outage where a host stays disconnected >5 minutes will still page Sev 0.
+**Workbook visibility:** The Part 2 **Host Events** panels show only `vpxd`-side events (Fdm peer chatter excluded), and a dedicated explanation panel describes the recovery-aware + burst-collapsing logic. A real outage where one or more hosts stay disconnected >5 minutes will still page Sev 0; a 60-host vCenter event produces a single alert row with `HostsAffected = 60`.
 
 ### Adding Custom Exclusions
 
