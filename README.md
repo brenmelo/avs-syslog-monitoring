@@ -411,7 +411,7 @@ Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** sect
 
 | Workbook panel | Alert rule | Azure Monitor Sev |
 |---|---|---|
-| Host Events (HostConnectionLost) | `AVS-Event-Host-ConnectionLost` | 0 (Critical) |
+| Host Events (HostConnectionLost) | `AVS-Event-Host-ConnectionLost` (recovery-aware: only fires if host doesn't reconnect within 5 min; Fdm peer chatter excluded) | 0 (Critical) |
 | Host Events (HostShutdownEvent) | `AVS-Event-Host-Shutdown` | 0 (Critical) |
 | VM Disconnected | `AVS-Event-VM-Disconnected` (excludes vSAN health-check noise) | 1 (Error) |
 | VM Removed from Inventory | `AVS-Event-VM-RemovedFromInventory` (excludes vSAN health-check noise) | 1 (Error) |
@@ -434,10 +434,26 @@ Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** sect
 | **Operator / Threshold** | Greater than 0 |
 | **Default** | ✅ Enabled |
 
+> **Recovery-aware (Option 2):** A naive `Message has "lost connection to the host"` query is *extremely* noisy in AVS:
+> 1. Every peer ESXi host's `Fdm` (vSphere HA) agent logs `Lost connection to the host agent` whenever any host blips — one transient event in an 80-host cluster generates ~70 log lines.
+> 2. AVS hosts routinely disconnect for 10–60 seconds (Microsoft-managed maintenance, vSAN health checks, transient network jitter) and immediately reconnect.
+>
+> This query filters both: it matches only `vpxd`'s `HostConnectionLostEvent` and only fires when the corresponding `HostConnectedEvent` for the same host is missing or arrives more than 5 minutes later.
+
 ```kql
-AVSSyslog
-| where Message has "lost connection to the host"
-| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+let window = 15m;
+let lost = AVSSyslog
+| where AppName == "vpxd" and Message has "HostConnectionLostEvent"
+| extend Host = extract(@"Host (\S+) in", 1, Message)
+| project LostTime = TimeGenerated, Host;
+let connected = AVSSyslog
+| where AppName == "vpxd" and Message has "HostConnectedEvent"
+| extend Host = extract(@"Connected to (\S+) in", 1, Message)
+| project ConnTime = TimeGenerated, Host;
+lost
+| join kind=leftouter connected on Host
+| where isnull(ConnTime) or ConnTime < LostTime or (ConnTime - LostTime) > 5m
+| project TimeGenerated = LostTime, Host, RecoveredAfter = iff(isnull(ConnTime), timespan(null), ConnTime - LostTime)
 ```
 
 #### Host-Shutdown
@@ -800,6 +816,34 @@ vSAN periodically creates short-lived test VMs to validate datastore health, the
 ```
 
 **Workbook visibility:** The **Top Repeated VM Events** panel groups VM events by source (`vSAN health-check (noise)` vs `Customer / vCenter`) so you can see at a glance whether a high count is real activity.
+
+### Excluded pattern (Sev 0 Host-ConnectionLost alert) — recovery-aware
+
+A naive `Message has "lost connection to the host"` query catches **two very different things**:
+
+| AppName | Pattern | What it is |
+|---|---|---|
+| `Fdm` | `Lost connection to the host agent` (×N peers) | vSphere HA peer chatter — every other ESXi host logs this when *any* host blips. One transient event in an 80-host cluster = ~70 log lines. **Not actionable.** |
+| `vpxd` | `vim.event.HostConnectionLostEvent` followed by `HostConnectedEvent` within seconds | AVS-routine transient blip — Microsoft-managed maintenance, vSAN health checks, or network jitter. Auto-recovers, no customer impact. |
+
+**Why it's safe to exclude:**
+- All `Fdm` "Lost connection to the host agent" messages are HA peer chatter (every host logs it about every other host). Treating them as Sev 0 events would generate dozens of duplicate pages per blip.
+- Sub-5-minute disconnect/reconnect pairs are a normal AVS operational pattern — Microsoft handles them transparently.
+
+**Filter used in the Sev0 `AVS-Event-Host-ConnectionLost` alert (recovery-aware):**
+```kql
+let lost = AVSSyslog | where AppName == "vpxd" and Message has "HostConnectionLostEvent"
+| extend Host = extract(@"Host (\S+) in", 1, Message)
+| project LostTime = TimeGenerated, Host;
+let connected = AVSSyslog | where AppName == "vpxd" and Message has "HostConnectedEvent"
+| extend Host = extract(@"Connected to (\S+) in", 1, Message)
+| project ConnTime = TimeGenerated, Host;
+lost
+| join kind=leftouter connected on Host
+| where isnull(ConnTime) or ConnTime < LostTime or (ConnTime - LostTime) > 5m
+```
+
+**Workbook visibility:** The Part 2 **Host Events** panels show only `vpxd`-side events (Fdm peer chatter excluded), and a dedicated explanation panel describes the recovery-aware logic. A real outage where a host stays disconnected >5 minutes will still page Sev 0.
 
 ### Adding Custom Exclusions
 

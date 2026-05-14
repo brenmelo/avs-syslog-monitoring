@@ -286,7 +286,7 @@
       "condition": "[parameters('deployHostConnectionLost')]",
       "properties": {
         "displayName": "[format('{0}-Event-Host-ConnectionLost', parameters('alertNamePrefix'))]",
-        "description": "Host lost connection to vCenter",
+        "description": "Host lost connection to vCenter and did not reconnect within 5 minutes (transient blips and Fdm peer chatter excluded)",
         "severity": 0,
         "enabled": true,
         "evaluationFrequency": "PT5M",
@@ -297,7 +297,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where Message has \"lost connection to the host\"\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "query": "let window = 15m;\nlet lost = AVSSyslog | where AppName == \"vpxd\" and Message has \"HostConnectionLostEvent\" | extend Host = extract(@\"Host (\\S+) in\", 1, Message) | project LostTime = TimeGenerated, Host;\nlet connected = AVSSyslog | where AppName == \"vpxd\" and Message has \"HostConnectedEvent\" | extend Host = extract(@\"Connected to (\\S+) in\", 1, Message) | project ConnTime = TimeGenerated, Host;\nlost\n| join kind=leftouter connected on Host\n| where isnull(ConnTime) or ConnTime < LostTime or (ConnTime - LostTime) > 5m\n| project TimeGenerated = LostTime, Host, RecoveredAfter = iff(isnull(ConnTime), timespan(null), ConnTime - LostTime)",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,
