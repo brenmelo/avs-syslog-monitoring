@@ -279,7 +279,7 @@ All alert rules use an **evaluation frequency of 5 minutes** with a **lookback w
 
 ### Understanding Syslog Severity Levels
 
-Syslog uses eight standard severity levels defined in [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1). This solution focuses on **Severity 0–3** as high-impact events that warrant alerting:
+Syslog uses eight standard severity levels defined in [RFC 5424](https://datatracker.ietf.org/doc/html/rfc5424#section-6.2.1). This solution focuses on **Severity 0–2** as high-impact events that warrant alerting:
 
 | Level | Keyword | Meaning | Examples | Alerting Strategy |
 |:---:|---|---|---|---|
