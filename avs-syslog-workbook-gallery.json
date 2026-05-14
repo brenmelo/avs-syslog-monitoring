@@ -157,6 +157,75 @@
       "name": "section-overview"
     },
     {
+      "type": 3,
+      "content": {
+        "version": "KqlItem/1.0",
+        "query": "// Same exclusion logic as the deployed AVS-Syslog-Sev0-Emergency / Sev0-Alert / Sev1-Critical rules. Sev 3 (Error) intentionally omitted — no alert is deployed for it.\nlet sev0 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\" or Message has \"Disconnected with TN\"))\n| where not(AppName == \"vmkbacktrace\" and Message has \"hostd-live\")\n| summarize Count = count()\n| extend SeverityGroup = \"🔴 Emergency (Sev 0)\";\nlet sev1 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\"))\n| where not(AppName == \"NSX\" and Message has \"ESX Agent Manager (EAM) service\" and Message has_any (\"is down\", \"is either up\"))\n| where not(AppName == \"sudo\" and Message has_any (\"Account or password is expired\", \"unable to change expired password\", \"Authentication token manipulation error\"))\n| summarize Count = count()\n| extend SeverityGroup = \"🟠 Alert (Sev 1)\";\nlet sev2 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| where not(AppName == \"NSX\" and Message has \"should resolve to the same FQDN\")\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and (Message has \"are down\" or Message has \"are reachable\"))\n| summarize Count = count()\n| extend SeverityGroup = \"🟡 Critical (Sev 2)\";\nlet defaults = datatable(SeverityGroup:string, Count:long) [\n    \"🔴 Emergency (Sev 0)\", 0,\n    \"🟠 Alert (Sev 1)\", 0,\n    \"🟡 Critical (Sev 2)\", 0\n];\nunion sev0, sev1, sev2, defaults\n| summarize Count = sum(Count) by SeverityGroup\n| extend Status = iff(Count == 0, \"🟢 HEALTHY\", \"🔴 alertable\")\n| extend SortOrder = case(SeverityGroup == \"🔴 Emergency (Sev 0)\", 0, SeverityGroup == \"🟠 Alert (Sev 1)\", 1, SeverityGroup == \"🟡 Critical (Sev 2)\", 2, 99)\n| order by SortOrder asc\n| project SeverityGroup, Count, Status",
+        "size": 3,
+        "title": "Alertable Severity Volume (0–2) — after deployed exclusions (Sev 3 Error has no alert)",
+        "queryType": 0,
+        "visualization": "tiles",
+        "tileSettings": {
+          "titleContent": {
+            "columnMatch": "SeverityGroup",
+            "formatter": 1
+          },
+          "leftContent": {
+            "columnMatch": "Count",
+            "formatter": 12,
+            "formatOptions": {
+              "palette": "redBright",
+              "thresholdsOptions": "colors",
+              "thresholdsGrid": [
+                {
+                  "operator": "==",
+                  "thresholdValue": "0",
+                  "representation": "green",
+                  "text": ""
+                },
+                {
+                  "operator": ">",
+                  "thresholdValue": "100",
+                  "representation": "redBright",
+                  "text": ""
+                },
+                {
+                  "operator": ">",
+                  "thresholdValue": "10",
+                  "representation": "orange",
+                  "text": ""
+                },
+                {
+                  "operator": "Default",
+                  "thresholdValue": null,
+                  "representation": "yellow",
+                  "text": ""
+                }
+              ]
+            },
+            "numberFormat": {
+              "unit": 0,
+              "options": {
+                "style": "decimal",
+                "maximumFractionDigits": 0
+              }
+            }
+          },
+          "secondaryContent": {
+            "columnMatch": "Status",
+            "formatter": 1
+          },
+          "showBorder": true,
+          "size": "auto"
+        },
+        "crossComponentResources": [
+          "{Workspace}"
+        ],
+        "resourceType": "microsoft.operationalinsights/workspaces"
+      },
+      "name": "Severity-tiles-alertable"
+    },
+    {
       "type": 1,
       "content": {
         "json": "> ℹ️ **The tiles below are raw, unfiltered ingestion volume** — every event in the AVSSyslog table at that severity, including all the known-noisy patterns Microsoft generates routinely (vSAN health-check chatter, NSX peer heartbeats, sudo retry loops, etc.). **These numbers are NOT what would page you.** For the actual alertable counts after exclusions, scroll to the **Alert Preview** panel in Part 1 (Sev catch-all rules) and Part 2 (event-specific rules). It is normal for raw `Error (Sev 3)` to be in the millions — no alert is deployed for Sev 3 because it is dominated by routine ESXi background chatter (hostd, vsand, localcli, etc.)."
@@ -231,75 +300,6 @@
         "resourceType": "microsoft.operationalinsights/workspaces"
       },
       "name": "Severity-tiles"
-    },
-    {
-      "type": 3,
-      "content": {
-        "version": "KqlItem/1.0",
-        "query": "// Same exclusion logic as the deployed AVS-Syslog-Sev0-Emergency / Sev0-Alert / Sev1-Critical rules. Sev 3 (Error) intentionally omitted \u2014 no alert is deployed for it.\nlet sev0 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\" or Message has \"Disconnected with TN\"))\n| where not(AppName == \"vmkbacktrace\" and Message has \"hostd-live\")\n| summarize Count = count()\n| extend SeverityGroup = \"\ud83d\udd34 Emergency (Sev 0)\";\nlet sev1 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\"))\n| where not(AppName == \"NSX\" and Message has \"ESX Agent Manager (EAM) service\" and Message has_any (\"is down\", \"is either up\"))\n| where not(AppName == \"sudo\" and Message has_any (\"Account or password is expired\", \"unable to change expired password\", \"Authentication token manipulation error\"))\n| summarize Count = count()\n| extend SeverityGroup = \"\ud83d\udfe0 Alert (Sev 1)\";\nlet sev2 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| where not(AppName == \"NSX\" and Message has \"should resolve to the same FQDN\")\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and (Message has \"are down\" or Message has \"are reachable\"))\n| summarize Count = count()\n| extend SeverityGroup = \"\ud83d\udfe1 Critical (Sev 2)\";\nlet defaults = datatable(SeverityGroup:string, Count:long) [\n    \"\ud83d\udd34 Emergency (Sev 0)\", 0,\n    \"\ud83d\udfe0 Alert (Sev 1)\", 0,\n    \"\ud83d\udfe1 Critical (Sev 2)\", 0\n];\nunion sev0, sev1, sev2, defaults\n| summarize Count = sum(Count) by SeverityGroup\n| extend Status = iff(Count == 0, \"\ud83d\udfe2 HEALTHY\", \"\ud83d\udd34 alertable\")\n| extend SortOrder = case(SeverityGroup == \"\ud83d\udd34 Emergency (Sev 0)\", 0, SeverityGroup == \"\ud83d\udfe0 Alert (Sev 1)\", 1, SeverityGroup == \"\ud83d\udfe1 Critical (Sev 2)\", 2, 99)\n| order by SortOrder asc\n| project SeverityGroup, Count, Status",
-        "size": 3,
-        "title": "Alertable Severity Volume (0\u20132) \u2014 after deployed exclusions (Sev 3 Error has no alert)",
-        "queryType": 0,
-        "visualization": "tiles",
-        "tileSettings": {
-          "titleContent": {
-            "columnMatch": "SeverityGroup",
-            "formatter": 1
-          },
-          "leftContent": {
-            "columnMatch": "Count",
-            "formatter": 12,
-            "formatOptions": {
-              "palette": "redBright",
-              "thresholdsOptions": "colors",
-              "thresholdsGrid": [
-                {
-                  "operator": "==",
-                  "thresholdValue": "0",
-                  "representation": "green",
-                  "text": ""
-                },
-                {
-                  "operator": ">",
-                  "thresholdValue": "100",
-                  "representation": "redBright",
-                  "text": ""
-                },
-                {
-                  "operator": ">",
-                  "thresholdValue": "10",
-                  "representation": "orange",
-                  "text": ""
-                },
-                {
-                  "operator": "Default",
-                  "thresholdValue": null,
-                  "representation": "yellow",
-                  "text": ""
-                }
-              ]
-            },
-            "numberFormat": {
-              "unit": 0,
-              "options": {
-                "style": "decimal",
-                "maximumFractionDigits": 0
-              }
-            }
-          },
-          "secondaryContent": {
-            "columnMatch": "Status",
-            "formatter": 1
-          },
-          "showBorder": true,
-          "size": "auto"
-        },
-        "crossComponentResources": [
-          "{Workspace}"
-        ],
-        "resourceType": "microsoft.operationalinsights/workspaces"
-      },
-      "name": "Severity-tiles-alertable"
     },
     {
       "type": 3,
@@ -435,7 +435,7 @@
     {
       "type": 1,
       "content": {
-        "json": "#### Alert Preview \u2014 what the Sev catch-all alerts would have caught in this time range\n\nRuns the **same exclusions** as the deployed `AVS-Syslog-Sev0-Emergency` / `Sev0-Alert` / `Sev1-Critical` rules against the workbook's selected TimeRange and HostFilter."
+        "json": "#### Alert Preview — what the Sev catch-all alerts would have caught in this time range\n\nRuns the **same exclusions** as the deployed `AVS-Syslog-Sev0-Emergency` / `Sev0-Alert` / `Sev1-Critical` rules against the workbook's selected TimeRange and HostFilter."
       },
       "name": "sev-alert-preview-explanation"
     },
@@ -443,10 +443,10 @@
       "type": 3,
       "content": {
         "version": "KqlItem/1.0",
-        "query": "// Mirrors the deployed alert-rule exclusions for AVS-Syslog-Sev0-Emergency / Sev0-Alert / Sev1-Critical.\nlet s1 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\" or Message has \"Disconnected with TN\"))\n| where not(AppName == \"vmkbacktrace\" and Message has \"hostd-live\")\n| count\n| extend Alert = \"AVS-Syslog-Sev0-Emergency\", Sev = \"0\", Logic = \"Severity emerg/emergency (NSX TN connection lifecycle + vmkbacktrace hostd-live excluded)\";\nlet s2 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\"))\n| where not(AppName == \"NSX\" and Message has \"ESX Agent Manager (EAM) service\" and Message has_any (\"is down\", \"is either up\"))\n| where not(AppName == \"sudo\" and Message has_any (\"Account or password is expired\", \"unable to change expired password\", \"Authentication token manipulation error\"))\n| count\n| extend Alert = \"AVS-Syslog-Sev0-Alert\", Sev = \"0\", Logic = \"Severity alert (NSX failure-domain heartbeat, NSX EAM flap, sudo expired-credential excluded)\";\nlet s3 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| where not(AppName == \"NSX\" and Message has \"should resolve to the same FQDN\")\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and (Message has \"are down\" or Message has \"are reachable\"))\n| count\n| extend Alert = \"AVS-Syslog-Sev1-Critical\", Sev = \"1\", Logic = \"Severity crit/critical (vsand stats, clomd, etcd snap, esxcli, NSX FQDN/FD chatter excluded)\";\nunion s1, s2, s3\n| project Alert, Sev, MatchingEvents = Count, WouldFire = iff(Count > 0, \"\ud83d\udd34 YES\", \"\ud83d\udfe2 No\"), Logic\n| order by toint(Sev) asc, MatchingEvents desc",
+        "query": "// Mirrors the deployed alert-rule exclusions for AVS-Syslog-Sev0-Emergency / Sev0-Alert / Sev1-Critical.\nlet s1 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"emerg\", \"emergency\")\n| where not(AppName == \"NSX\" and (Message has \"Accepts incoming connection from TN\" or Message has \"Finishes fullsync with TN\" or Message has \"Disconnected with TN\"))\n| where not(AppName == \"vmkbacktrace\" and Message has \"hostd-live\")\n| count\n| extend Alert = \"AVS-Syslog-Sev0-Emergency\", Sev = \"0\", Logic = \"Severity emerg/emergency (NSX TN connection lifecycle + vmkbacktrace hostd-live excluded)\";\nlet s2 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity == \"alert\"\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and Message has_any (\"are down\", \"are reachable\"))\n| where not(AppName == \"NSX\" and Message has \"ESX Agent Manager (EAM) service\" and Message has_any (\"is down\", \"is either up\"))\n| where not(AppName == \"sudo\" and Message has_any (\"Account or password is expired\", \"unable to change expired password\", \"Authentication token manipulation error\"))\n| count\n| extend Alert = \"AVS-Syslog-Sev0-Alert\", Sev = \"0\", Logic = \"Severity alert (NSX failure-domain heartbeat, NSX EAM flap, sudo expired-credential excluded)\";\nlet s3 = AVSSyslog\n| where TimeGenerated {TimeRange}\n| where '*' in ({HostFilter}) or HostName in~ ({HostFilter})\n| where Severity in (\"crit\", \"critical\")\n| where not(AppName == \"vsand\" and Message has \"CalculateHostStats\")\n| where not(AppName in (\"clomd\", \"clomd-whatif\"))\n| where not(AppName == \"etcd\" and Message has \"purge snap\")\n| where AppName != \"esxcli\"\n| where not(AppName == \"NSX\" and Message has \"should resolve to the same FQDN\")\n| where not(AppName == \"NSX\" and Message has \"failure domain\" and (Message has \"are down\" or Message has \"are reachable\"))\n| count\n| extend Alert = \"AVS-Syslog-Sev1-Critical\", Sev = \"1\", Logic = \"Severity crit/critical (vsand stats, clomd, etcd snap, esxcli, NSX FQDN/FD chatter excluded)\";\nunion s1, s2, s3\n| project Alert, Sev, MatchingEvents = Count, WouldFire = iff(Count > 0, \"🔴 YES\", \"🟢 No\"), Logic\n| order by toint(Sev) asc, MatchingEvents desc",
         "size": 1,
-        "title": "Alert Preview \u2014 Sev catch-all rules matching deployed logic in selected TimeRange",
-        "noDataMessage": "\ud83d\udfe2 HEALTHY \u2014 none of the Part 1 Sev catch-all alerts would have fired in this time range.",
+        "title": "Alert Preview — Sev catch-all rules matching deployed logic in selected TimeRange",
+        "noDataMessage": "🟢 HEALTHY — none of the Part 1 Sev catch-all alerts would have fired in this time range.",
         "queryType": 0,
         "visualization": "table",
         "gridSettings": {
@@ -1004,21 +1004,21 @@
     {
       "type": 1,
       "content": {
-        "json": "#### NSX failure-domain heartbeat noise (related tuning)\n\nNSX manager nodes constantly heartbeat each other. When a peer misses ~3 heartbeats (a few seconds of jitter), NSX logs `All members of failure domain <id> are down` at syslog `alert` severity \u2014 then logs `... are reachable` as soon as heartbeats resume. **Both lines are tagged `alert`**, so a 30-second blip leaks into the broad `AVS-Syslog-Sev0-Alert` rule and pages on what is almost always a transient mgmt-plane jitter (often correlated with the same vCenter mgmt-plane events that trigger Host Connection Lost bursts).\n\n**Therefore:**\n- The Sev 0 catch-all `AVS-Syslog-Sev0-Alert` now **excludes** raw `failure domain ... are down/reachable` chatter.\n- A dedicated **`AVS-Event-NSX-FailureDomainDown`** alert is **recovery-aware + burst-collapsed** (same shape as Host-ConnectionLost): it fires only when an FD goes down and does **not** return reachable within 5 minutes, and collapses simultaneous FDs into 1-minute windows (`FDsAffected`, `SampleFDs`, `MaxRecoveredAfter`).\n\nReal sustained NSX failure-domain outages still page Sev 0; transient peer-heartbeat blips do not."
+        "json": "#### NSX failure-domain heartbeat noise (related tuning)\n\nNSX manager nodes constantly heartbeat each other. When a peer misses ~3 heartbeats (a few seconds of jitter), NSX logs `All members of failure domain <id> are down` at syslog `alert` severity — then logs `... are reachable` as soon as heartbeats resume. **Both lines are tagged `alert`**, so a 30-second blip leaks into the broad `AVS-Syslog-Sev0-Alert` rule and pages on what is almost always a transient mgmt-plane jitter (often correlated with the same vCenter mgmt-plane events that trigger Host Connection Lost bursts).\n\n**Therefore:**\n- The Sev 0 catch-all `AVS-Syslog-Sev0-Alert` now **excludes** raw `failure domain ... are down/reachable` chatter.\n- A dedicated **`AVS-Event-NSX-FailureDomainDown`** alert is **recovery-aware + burst-collapsed** (same shape as Host-ConnectionLost): it fires only when an FD goes down and does **not** return reachable within 5 minutes, and collapses simultaneous FDs into 1-minute windows (`FDsAffected`, `SampleFDs`, `MaxRecoveredAfter`).\n\nReal sustained NSX failure-domain outages still page Sev 0; transient peer-heartbeat blips do not."
       },
       "name": "nsx-failure-domain-explanation"
     },
     {
       "type": 1,
       "content": {
-        "json": "#### Other Sev 0 catch-all exclusions (NSX EAM + sudo expired-credential loops)\n\nTwo additional `alert`-tagged patterns commonly leak into `AVS-Syslog-Sev0-Alert` in AVS environments:\n\n1. **NSX `ESX Agent Manager (EAM) service ... is down` / `is either up`** \u2014 NSX manager peers (APP01/02/03) report independently when EAM connectivity to a vCenter compute manager blips. A 3-6 minute blip generates 4-6 `alert` rows. Pattern is identical to NSX failure-domain heartbeat.\n2. **`sudo` `Account or password is expired` / `Authentication token manipulation error`** \u2014 a Microsoft-managed monitoring agent runs `sudo netstat` periodically on each host. If the local root credential expires on a host (Microsoft-side credential rotation didn\u2019t refresh), every poll fails and logs **two `alert` lines per minute, indefinitely** \u2014 typically on a single host. The customer cannot fix this; the host needs a Microsoft support ticket to rotate the credential.\n\n**Therefore:**\n- Both patterns are **excluded** from `AVS-Syslog-Sev0-Alert` to stop the noise.\n- A dedicated **`AVS-Event-NSX-EAMServiceDown`** alert (Sev 0, recovery-aware + burst-collapsed, same shape as Host-ConnectionLost / NSX-FailureDomainDown) catches sustained EAM outages.\n- A dedicated **`AVS-Event-Host-SudoExpiredCredential`** alert (Sev 2, **fires at most once per host per hour** when >5 sudo expired-password attempts are seen) surfaces the affected HostName so the customer knows which host needs a Microsoft support ticket."
+        "json": "#### Other Sev 0 catch-all exclusions (NSX EAM + sudo expired-credential loops)\n\nTwo additional `alert`-tagged patterns commonly leak into `AVS-Syslog-Sev0-Alert` in AVS environments:\n\n1. **NSX `ESX Agent Manager (EAM) service ... is down` / `is either up`** — NSX manager peers (APP01/02/03) report independently when EAM connectivity to a vCenter compute manager blips. A 3-6 minute blip generates 4-6 `alert` rows. Pattern is identical to NSX failure-domain heartbeat.\n2. **`sudo` `Account or password is expired` / `Authentication token manipulation error`** — a Microsoft-managed monitoring agent runs `sudo netstat` periodically on each host. If the local root credential expires on a host (Microsoft-side credential rotation didn’t refresh), every poll fails and logs **two `alert` lines per minute, indefinitely** — typically on a single host. The customer cannot fix this; the host needs a Microsoft support ticket to rotate the credential.\n\n**Therefore:**\n- Both patterns are **excluded** from `AVS-Syslog-Sev0-Alert` to stop the noise.\n- A dedicated **`AVS-Event-NSX-EAMServiceDown`** alert (Sev 0, recovery-aware + burst-collapsed, same shape as Host-ConnectionLost / NSX-FailureDomainDown) catches sustained EAM outages.\n- A dedicated **`AVS-Event-Host-SudoExpiredCredential`** alert (Sev 2, **fires at most once per host per hour** when >5 sudo expired-password attempts are seen) surfaces the affected HostName so the customer knows which host needs a Microsoft support ticket."
       },
       "name": "sev0-other-exclusions-explanation"
     },
     {
       "type": 1,
       "content": {
-        "json": "#### `AVS-Event-VM-Disconnected` \u2014 vCenter mass-flap suppression\n\n`VmDisconnectedEvent` from `vpxd` is **not** the same as a real VM outage \u2014 vCenter logs it any time it loses its management channel to a VM, including when **vpxd itself restarts** or the vCenter\u2192ESXi agent reconnects. The signature: dozens of VMs across **every** host in the cluster all flip to `Disconnected` within the same second, then flip back to `Connected` seconds later. Even Microsoft-managed appliances (`vCLS-*`, `TNT397-NSX-APP01/02`, `TNT397-HCX-MGR`, `TNT397-EVM-*`) get caught.\n\n**Three layers of protection on the alert:**\n1. **Recovery-aware** \u2014 each `VmDisconnectedEvent` is paired with the next `VmConnectedEvent` for the same VM; only fires if the VM stays disconnected > 5 minutes.\n2. **Burst-collapse** \u2014 simultaneous events grouped into 1-minute windows.\n3. **Fleet-wide suppression** \u2014 minutes where \u2265 10 distinct VMs flap are dropped entirely (signature of vCenter-side reconnect, not real VM outages).\n\nvSAN health-check disposable VMs (`vsan-healthcheck-disposable-*`) are also excluded."
+        "json": "#### `AVS-Event-VM-Disconnected` — vCenter mass-flap suppression\n\n`VmDisconnectedEvent` from `vpxd` is **not** the same as a real VM outage — vCenter logs it any time it loses its management channel to a VM, including when **vpxd itself restarts** or the vCenter→ESXi agent reconnects. The signature: dozens of VMs across **every** host in the cluster all flip to `Disconnected` within the same second, then flip back to `Connected` seconds later. Even Microsoft-managed appliances (`vCLS-*`, `TNT397-NSX-APP01/02`, `TNT397-HCX-MGR`, `TNT397-EVM-*`) get caught.\n\n**Three layers of protection on the alert:**\n1. **Recovery-aware** — each `VmDisconnectedEvent` is paired with the next `VmConnectedEvent` for the same VM; only fires if the VM stays disconnected > 5 minutes.\n2. **Burst-collapse** — simultaneous events grouped into 1-minute windows.\n3. **Fleet-wide suppression** — minutes where ≥ 10 distinct VMs flap are dropped entirely (signature of vCenter-side reconnect, not real VM outages).\n\nvSAN health-check disposable VMs (`vsan-healthcheck-disposable-*`) are also excluded."
       },
       "name": "vm-disconnected-explanation"
     },
