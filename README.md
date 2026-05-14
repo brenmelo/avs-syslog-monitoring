@@ -14,6 +14,7 @@ Pre-built Azure Monitor **Workbook** (~40 panels) and **13 syslog alert rules** 
 ### Also included
 
 - **4 Azure Service Health alerts** — Activity-log alerts filtered to AVS for Service Issues, Planned Maintenance (ESXi/vCenter/NSX/vSAN upgrades), Health Advisories, and Security Advisories (VMSAs/CVEs). Covers the Microsoft side of the [shared responsibility model](https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/azure-vmware/manage).
+- **3 Azure Resource Health alerts** — Per-private-cloud availability state alerts (Unavailable / Degraded / Unknown). First-party Azure platform signal that fires even when syslog ingestion has stopped — catches the "silent failure" case where syslog-based rules can't fire.
 - **Guided deployment wizards** — `createUiDefinition` portal experiences with action group pickers, alert toggles, threshold sliders, and region selection. One-click **Deploy to Azure** buttons for each artifact.
 - **Operational guidance** — Severity model explanation, action group strategy across 10 notification types (Email, SMS, Teams, Webhook, ITSM, Logic App, Function, Runbook, etc.), and known noisy events that are safely filtered.
 
@@ -26,16 +27,17 @@ Pre-built Azure Monitor **Workbook** (~40 panels) and **13 syslog alert rules** 
 1. [Prerequisites](#-prerequisites)
 2. [Deploy the Workbook](#1-deploy-the-workbook)
 3. [Deploy the AVS Syslog Alert Rules](#2-deploy-the-avs-syslog-alert-rules)
-4. [Deploy Azure Service Health Alerts](#3-deploy-azure-service-health-alerts-recommended)
-5. [Alert Rules Reference](#-alert-rules-reference)
-6. [Action Group Routing](#-action-group-routing)
-7. [Threshold Tuning Guide](#-threshold-tuning-guide)
-8. [Alert Naming Convention](#-alert-naming-convention)
-9. [Repository Files](#-repository-files)
-10. [Deployment Parameters — Alert Template](#-deployment-parameters--alert-template)
-11. [Known Noisy Events & Exclusion Filters](#-known-noisy-events--exclusion-filters)
-12. [Exploration Queries](#-exploration-queries)
-13. [References](#-references)
+4. [Deploy Azure Service Health Alerts](#3-deploy-azure-service-health-alerts)
+5. [Deploy Azure Resource Health Alerts](#4-deploy-azure-resource-health-alerts)
+6. [Alert Rules Reference](#-alert-rules-reference)
+7. [Action Group Routing](#-action-group-routing)
+8. [Threshold Tuning Guide](#-threshold-tuning-guide)
+9. [Alert Naming Convention](#-alert-naming-convention)
+10. [Repository Files](#-repository-files)
+11. [Deployment Parameters — Alert Template](#-deployment-parameters--alert-template)
+12. [Known Noisy Events & Exclusion Filters](#-known-noisy-events--exclusion-filters)
+13. [Exploration Queries](#-exploration-queries)
+14. [References](#-references)
 
 ---
 
@@ -197,7 +199,7 @@ Repeat for each alert you want. The full KQL queries are listed below.
 
 ---
 
-## 🏥 3. Deploy Azure Service Health Alerts (recommended)
+## 🏥 3. Deploy Azure Service Health Alerts
 
 Syslog alerts monitor what's happening **inside** your AVS environment. Azure Service Health alerts monitor what **Microsoft is doing** — service outages, planned maintenance (ESXi/vCenter/NSX upgrades), health advisories, and security advisories (VMSAs, CVEs). Both are needed for complete monitoring.
 
@@ -251,6 +253,63 @@ az monitor activity-log alert create \
 ```
 
 > **Reference:** [Create Service Health alerts using ARM template](https://learn.microsoft.com/en-us/azure/service-health/alerts-activity-log-service-notifications-arm) | [Create Service Health alerts using the Azure portal](https://learn.microsoft.com/en-us/azure/service-health/alerts-activity-log-service-notifications-portal)
+
+---
+
+## 🏥 4. Deploy Azure Resource Health Alerts
+
+Service Health (Section 3) tells you what **Microsoft** is doing across the platform. **Resource Health** tells you the live availability state of **your specific AVS private clouds** — a first-party signal from the Azure resource provider that's independent of Log Analytics.
+
+### Why Resource Health matters for AVS
+
+- **Catches silent failures** — if syslog ingestion stops (broken DCR, expired DCE, network partition to Log Analytics), every syslog-based alert in this repo goes blind. Resource Health still fires because it's reported by the AVS resource provider itself.
+- **No KQL, no DCR, no workspace** — deploys as a plain Activity Log alert. Zero data-pipeline dependencies.
+- **Three states map cleanly to Azure Monitor severity:**
+
+| Resource Health state | Azure Monitor Sev | Typical cause | Default |
+|---|---|---|---|
+| **Unavailable** | 0 (Critical) | Platform outage, full SDDC down | ✅ Enabled |
+| **Degraded** | 1 (Error) | Partial impact — vSAN capacity, host failure, NSX edge issue | ✅ Enabled |
+| **Unknown** | 2 (Warning) | Telemetry blip or precursor to Unavailable | ❌ Disabled (baseline first) |
+
+### Option A — One-click Deploy
+
+[![Deploy Resource Health Alerts](https://aka.ms/deploytoazurebutton)](https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2Favs-resource-health-alerts-deploy-template.json/createUIDefinitionUri/https%3A%2F%2Fraw.githubusercontent.com%2Fbrenmelo%2Favs-syslog-monitoring%2Fmain%2FcreateUiDefinition-resource-health.json)
+
+1. Click the button above.
+2. Select your **Subscription**, **Resource Group**, and **Region**.
+3. Leave **Alert Scope** blank to monitor every AVS private cloud in the subscription, **or** paste a resource group / specific `Microsoft.AVS/privateClouds` resource ID to scope tighter.
+4. Select an **existing action group** (create one first if needed — see [Section 2](#before-you-begin--create-an-action-group)).
+5. Check or uncheck which states to monitor:
+   - Unavailable (Sev 0) — enabled
+   - Degraded (Sev 1) — enabled
+   - Unknown (Sev 2) — disabled by default
+6. Click **Review + create** → **Create**.
+
+### Option B — Azure Portal (manual)
+
+1. Go to **Monitor → Alerts → + Create → Alert rule**.
+2. **Scope**: select your subscription, resource group, or a specific AVS private cloud.
+3. **Condition**: select **Resource health** → set **Current resource status** to `Unavailable` (repeat for `Degraded` / `Unknown` as separate rules).
+4. **Actions**: pick your action group.
+5. **Details**: name the rule (e.g., `AVS-ResourceHealth-Unavailable`) and set severity (Sev 0 / 1 / 2 to match the state).
+6. **Review + create** → **Create**.
+
+### Option C — Azure CLI
+
+```bash
+# Subscription-wide Unavailable alert
+az monitor activity-log alert create \
+  --name "AVS-ResourceHealth-Unavailable" \
+  --resource-group <your-rg> \
+  --condition category=ResourceHealth \
+  --condition resourceType=microsoft.avs/privateclouds \
+  --condition properties.currentHealthStatus=Unavailable \
+  --action-group <action-group-resource-id> \
+  --description "AVS private cloud transitioned to Unavailable"
+```
+
+> **Reference:** [Resource Health overview for AVS](https://learn.microsoft.com/en-us/azure/azure-vmware/concepts-monitor-resource-health) | [Configure Resource Health alerts](https://learn.microsoft.com/en-us/azure/service-health/resource-health-alert-arm-template-guide)
 
 ---
 
@@ -728,6 +787,8 @@ With the default prefix `AVS`:
 | `createUiDefinition.json` | Custom portal UI for the alert deployment wizard (resource pickers, sliders). |
 | `avs-service-health-alert-template.json` | ARM template for Azure Service Health alerts filtered to Azure VMware Solution. |
 | `createUiDefinition-service-health.json` | Custom portal UI for the Service Health deployment (action group picker). |
+| `avs-resource-health-alerts-deploy-template.json` | ARM template for Azure Resource Health alerts on AVS private clouds (Unavailable / Degraded / Unknown). |
+| `createUiDefinition-resource-health.json` | Custom portal UI for the Resource Health deployment (scope + action group picker, per-state toggles). |
 
 ---
 

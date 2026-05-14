@@ -1,0 +1,145 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "global",
+      "metadata": {
+        "description": "Location for the deployment. Activity log alerts are global."
+      }
+    },
+    "alertName": {
+      "type": "string",
+      "defaultValue": "AVS-ResourceHealth-Alert",
+      "metadata": {
+        "description": "Base name for the Resource Health alert rules."
+      }
+    },
+    "alertScope": {
+      "type": "string",
+      "defaultValue": "[subscription().id]",
+      "metadata": {
+        "description": "Scope to monitor. Defaults to the deployment subscription. Can be a resource group ID or a specific Microsoft.AVS/privateClouds resource ID."
+      }
+    },
+    "actionGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource ID of the action group to notify when AVS resource health changes.",
+        "strongType": "Microsoft.Insights/actionGroups"
+      }
+    },
+    "monitorUnavailable": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Alert when an AVS private cloud transitions to Unavailable (Sev 0)."
+      }
+    },
+    "monitorDegraded": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Alert when an AVS private cloud transitions to Degraded (Sev 1)."
+      }
+    },
+    "monitorUnknown": {
+      "type": "bool",
+      "defaultValue": false,
+      "metadata": {
+        "description": "Alert when an AVS private cloud transitions to Unknown (Sev 2). Often a precursor to Unavailable."
+      }
+    }
+  },
+  "resources": [
+    {
+      "condition": "[parameters('monitorUnavailable')]",
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "[format('{0}-Unavailable', parameters('alertName'))]",
+      "location": "Global",
+      "properties": {
+        "scopes": [
+          "[parameters('alertScope')]"
+        ],
+        "condition": {
+          "allOf": [
+            { "field": "category", "equals": "ResourceHealth" },
+            { "field": "resourceType", "equals": "microsoft.avs/privateclouds" },
+            { "field": "properties.currentHealthStatus", "equals": "Unavailable" }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            { "actionGroupId": "[parameters('actionGroupId')]" }
+          ]
+        },
+        "enabled": true,
+        "description": "Fires when an Azure VMware Solution private cloud transitions to Unavailable. Catches platform-level outages even if syslog ingestion has stopped."
+      }
+    },
+    {
+      "condition": "[parameters('monitorDegraded')]",
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "[format('{0}-Degraded', parameters('alertName'))]",
+      "location": "Global",
+      "properties": {
+        "scopes": [
+          "[parameters('alertScope')]"
+        ],
+        "condition": {
+          "allOf": [
+            { "field": "category", "equals": "ResourceHealth" },
+            { "field": "resourceType", "equals": "microsoft.avs/privateclouds" },
+            { "field": "properties.currentHealthStatus", "equals": "Degraded" }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            { "actionGroupId": "[parameters('actionGroupId')]" }
+          ]
+        },
+        "enabled": true,
+        "description": "Fires when an Azure VMware Solution private cloud transitions to Degraded. Often vSAN capacity / partial host failure."
+      }
+    },
+    {
+      "condition": "[parameters('monitorUnknown')]",
+      "type": "Microsoft.Insights/activityLogAlerts",
+      "apiVersion": "2020-10-01",
+      "name": "[format('{0}-Unknown', parameters('alertName'))]",
+      "location": "Global",
+      "properties": {
+        "scopes": [
+          "[parameters('alertScope')]"
+        ],
+        "condition": {
+          "allOf": [
+            { "field": "category", "equals": "ResourceHealth" },
+            { "field": "resourceType", "equals": "microsoft.avs/privateclouds" },
+            { "field": "properties.currentHealthStatus", "equals": "Unknown" }
+          ]
+        },
+        "actions": {
+          "actionGroups": [
+            { "actionGroupId": "[parameters('actionGroupId')]" }
+          ]
+        },
+        "enabled": true,
+        "description": "Fires when an Azure VMware Solution private cloud transitions to Unknown. Often a precursor to Unavailable or a control-plane telemetry issue. Disabled by default to reduce noise — enable after baselining."
+      }
+    }
+  ],
+  "outputs": {
+    "alertNames": {
+      "type": "array",
+      "value": [
+        "[format('{0}-Unavailable', parameters('alertName'))]",
+        "[format('{0}-Degraded', parameters('alertName'))]",
+        "[format('{0}-Unknown', parameters('alertName'))]"
+      ]
+    }
+  }
+}

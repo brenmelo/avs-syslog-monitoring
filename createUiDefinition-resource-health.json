@@ -1,0 +1,98 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/0.1.2-preview/CreateUIDefinition.MultiVm.json#",
+  "handler": "Microsoft.Azure.CreateUIDef",
+  "version": "0.1.2-preview",
+  "parameters": {
+    "config": {
+      "isWizard": false,
+      "basics": {
+        "description": "Deploy Azure Resource Health alerts for Azure VMware Solution private clouds. Fires on availability state transitions (Unavailable, Degraded, Unknown) — first-party Azure platform signal, no Log Analytics dependency. Catches outages even when syslog ingestion has stopped.",
+        "location": {
+          "visible": true
+        },
+        "subscription": {
+          "resourceProviders": ["Microsoft.Insights"]
+        },
+        "resourceGroup": {
+          "allowExisting": true
+        }
+      }
+    },
+    "basics": [
+      {
+        "name": "alertName",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Alert Name",
+        "defaultValue": "AVS-ResourceHealth-Alert",
+        "toolTip": "Base name for the Resource Health alert rules.",
+        "constraints": {
+          "required": true,
+          "regex": "^[a-zA-Z0-9-]{1,50}$",
+          "validationMessage": "Only letters, numbers, and hyphens. Max 50 characters."
+        }
+      },
+      {
+        "name": "alertScope",
+        "type": "Microsoft.Common.TextBox",
+        "label": "Alert Scope (Resource ID)",
+        "defaultValue": "",
+        "toolTip": "Optional. Leave blank to monitor every AVS private cloud in this subscription. Or paste a resource group ID (/subscriptions/{sub}/resourceGroups/{rg}) or a specific AVS private cloud resource ID (/subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.AVS/privateClouds/{name}) to scope tighter.",
+        "constraints": {
+          "required": false,
+          "regex": "^(/subscriptions/[a-fA-F0-9-]{36}(/resourceGroups/[^/]+(/providers/Microsoft\\.AVS/privateClouds/[^/]+)?)?)?$",
+          "validationMessage": "Must be empty (subscription scope) or a valid Azure resource ID for a subscription, resource group, or Microsoft.AVS/privateClouds resource."
+        }
+      },
+      {
+        "name": "actionGroupSelector",
+        "type": "Microsoft.Solutions.ResourceSelector",
+        "label": "Action Group",
+        "toolTip": "Select the action group to notify when AVS resource health changes.",
+        "resourceType": "Microsoft.Insights/actionGroups",
+        "options": {
+          "filter": {
+            "subscription": "onBasics",
+            "location": "all"
+          }
+        }
+      },
+      {
+        "name": "severityInfo",
+        "type": "Microsoft.Common.InfoBox",
+        "visible": true,
+        "options": {
+          "icon": "Info",
+          "text": "Resource Health states map to Azure Monitor severity: Unavailable = Sev 0, Degraded = Sev 1, Unknown = Sev 2. Unknown is disabled by default — it can fire on transient telemetry blips. Enable after baselining."
+        }
+      },
+      {
+        "name": "monitorUnavailable",
+        "type": "Microsoft.Common.CheckBox",
+        "label": "Unavailable (Sev 0) — private cloud is down",
+        "defaultValue": true
+      },
+      {
+        "name": "monitorDegraded",
+        "type": "Microsoft.Common.CheckBox",
+        "label": "Degraded (Sev 1) — partial impact (vSAN capacity, host failure)",
+        "defaultValue": true
+      },
+      {
+        "name": "monitorUnknown",
+        "type": "Microsoft.Common.CheckBox",
+        "label": "Unknown (Sev 2) — telemetry issue or precursor to Unavailable (off by default)",
+        "defaultValue": false
+      }
+    ],
+    "steps": [],
+    "outputs": {
+      "location": "[location()]",
+      "alertName": "[basics('alertName')]",
+      "alertScope": "[if(empty(basics('alertScope')), subscription().id, basics('alertScope'))]",
+      "actionGroupId": "[basics('actionGroupSelector').id]",
+      "monitorUnavailable": "[basics('monitorUnavailable')]",
+      "monitorDegraded": "[basics('monitorDegraded')]",
+      "monitorUnknown": "[basics('monitorUnknown')]"
+    }
+  }
+}
