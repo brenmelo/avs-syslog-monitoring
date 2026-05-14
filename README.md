@@ -415,7 +415,7 @@ Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** sect
 | Host Events (HostShutdownEvent) | `AVS-Event-Host-Shutdown` | 0 (Critical) |
 | VM Disconnected | `AVS-Event-VM-Disconnected` (excludes vSAN health-check noise) | 1 (Error) |
 | VM Removed from Inventory | `AVS-Event-VM-RemovedFromInventory` (excludes vSAN health-check noise) | 1 (Error) |
-| VM Guest Reboot | `AVS-Event-VM-GuestReboot` | 1 (Error) |
+| VM Guest Reboot | `AVS-Event-VM-GuestReboot` | 2 (Warning) |
 | DNS Failures | `AVS-Event-DNS-Failures` (threshold-based) | 1 (Error) |
 | Distributed Firewall Blocked | `AVS-Event-NSX-DFW-BlockedSpike` (threshold-based) | 2 (Warning) |
 | Host Maintenance Mode | `AVS-Event-Host-MaintenanceMode` | 2 (Warning) |
