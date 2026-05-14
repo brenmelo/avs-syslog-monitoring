@@ -370,7 +370,7 @@
       "condition": "[parameters('deployVmDisconnected')]",
       "properties": {
         "displayName": "[format('{0}-Event-VM-Disconnected', parameters('alertNamePrefix'))]",
-        "description": "VM disconnected event",
+        "description": "VM disconnected event (recovery-aware + burst-collapsed + vCenter mass-flap suppression). Pairs each VmDisconnectedEvent with the next VmConnectedEvent for the same VM; only fires if the VM stays disconnected > 5 minutes. Suppresses minutes where >= 10 distinct VMs flap simultaneously (signature of vpxd / vCenter reconnect, not real VM outages). vSAN health-check disposable VMs excluded.",
         "severity": 1,
         "enabled": true,
         "evaluationFrequency": "PT5M",
@@ -381,7 +381,7 @@
         "criteria": {
           "allOf": [
             {
-              "query": "AVSSyslog\n| where Message has \"vmdisconnectedevent\"\n| where not(Message has \"com.vmware.vsan.health\")\n| project TimeGenerated, HostName, AppName, Facility, Severity, Message",
+              "query": "let window = 15m;\nlet lookahead = 10m;\nlet fleetThreshold = 10;\nlet realDisconnect = 5m;\nlet pairs = AVSSyslog\n| where TimeGenerated > ago(window + lookahead)\n| where AppName == \"vpxd\"\n| where Message has_any (\"VmDisconnectedEvent\", \"VmConnectedEvent\")\n| where not(Message has \"com.vmware.vsan.health\")\n| extend State = case(Message has \"VmDisconnectedEvent\", \"Disconnected\", Message has \"VmConnectedEvent\", \"Connected\", \"\")\n| extend VM = extract(@\"\\] \\[([^\\]]+) on host \", 1, Message)\n| where VM != \"\" and State != \"\"\n| where VM !startswith \"vsan-healthcheck-disposable\"\n| sort by VM asc, TimeGenerated asc\n| extend NextState = next(State), NextTime = next(TimeGenerated), NextVM = next(VM)\n| where State == \"Disconnected\"\n| where TimeGenerated > ago(window)\n| extend RecoveredAfter = iff(NextVM == VM and NextState == \"Connected\", NextTime - TimeGenerated, timespan(null));\nlet burstMinutes = pairs | summarize VMsInBurst = dcount(VM) by Minute = bin(TimeGenerated, 1m) | where VMsInBurst >= fleetThreshold | project Minute;\npairs\n| where bin(TimeGenerated, 1m) !in (burstMinutes)\n| where isnull(RecoveredAfter) or RecoveredAfter > realDisconnect\n| summarize VMsAffected = dcount(VM), SampleVMs = tostring(make_set(VM, 10)), MaxRecoveredAfter = max(RecoveredAfter) by BurstTime = bin(TimeGenerated, 1m)\n| where VMsAffected > 0\n| project BurstTime, VMsAffected, SampleVMs, MaxRecoveredAfter",
               "timeAggregation": "Count",
               "operator": "GreaterThan",
               "threshold": 0,

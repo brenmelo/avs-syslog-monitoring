@@ -413,7 +413,7 @@ Each event panel in the workbook's **Part 2 — Event-Specific Monitoring** sect
 |---|---|---|
 | Host Events (HostConnectionLost) | `AVS-Event-Host-ConnectionLost` (recovery-aware + burst-collapsed: only fires if host doesn't reconnect within 5 min; bursts are summarized into 1-min windows so each row = one event with `HostsAffected` count, sample hosts, and longest outage; Fdm peer chatter excluded) | 0 (Critical) |
 | Host Events (HostShutdownEvent) | `AVS-Event-Host-Shutdown` | 0 (Critical) |
-| VM Disconnected | `AVS-Event-VM-Disconnected` (excludes vSAN health-check noise) | 1 (Error) |
+| VM Disconnected | `AVS-Event-VM-Disconnected` (recovery-aware + burst-collapsed + vCenter mass-flap suppression: only fires if VM stays disconnected > 5 min; minutes with ≥ 10 simultaneous flaps suppressed as vpxd reconnect noise; vSAN health-check disposable VMs excluded) | 1 (Error) |
 | VM Removed from Inventory | `AVS-Event-VM-RemovedFromInventory` (excludes vSAN health-check noise) | 1 (Error) |
 | VM Guest Reboot | `AVS-Event-VM-GuestReboot` | 2 (Warning) |
 | DNS Failures | `AVS-Event-DNS-Failures` (threshold-based) | 1 (Error) |
@@ -502,11 +502,44 @@ AVSSyslog
 | **Default** | ✅ Enabled |
 
 ```kql
-AVSSyslog
-| where Message has "vmdisconnectedevent"
-| where not(Message has "com.vmware.vsan.health")  // exclude vSAN health-check test VMs
-| project TimeGenerated, HostName, AppName, Facility, Severity, Message
+let window = 15m;
+let lookahead = 10m;
+let fleetThreshold = 10;     // >=10 VMs flapping in 1 min = vCenter event, suppress
+let realDisconnect = 5m;     // VM still disconnected after 5 min = real
+let pairs = AVSSyslog
+| where TimeGenerated > ago(window + lookahead)
+| where AppName == "vpxd"
+| where Message has_any ("VmDisconnectedEvent", "VmConnectedEvent")
+| where not(Message has "com.vmware.vsan.health")
+| extend State = case(Message has "VmDisconnectedEvent", "Disconnected",
+                      Message has "VmConnectedEvent",   "Connected", "")
+| extend VM = extract(@"\] \[([^\]]+) on host ", 1, Message)
+| where VM != "" and State != ""
+| where VM !startswith "vsan-healthcheck-disposable"
+| sort by VM asc, TimeGenerated asc
+| extend NextState = next(State), NextTime = next(TimeGenerated), NextVM = next(VM)
+| where State == "Disconnected"
+| where TimeGenerated > ago(window)
+| extend RecoveredAfter = iff(NextVM == VM and NextState == "Connected",
+                              NextTime - TimeGenerated, timespan(null));
+let burstMinutes = pairs
+| summarize VMsInBurst = dcount(VM) by Minute = bin(TimeGenerated, 1m)
+| where VMsInBurst >= fleetThreshold | project Minute;
+pairs
+| where bin(TimeGenerated, 1m) !in (burstMinutes)
+| where isnull(RecoveredAfter) or RecoveredAfter > realDisconnect
+| summarize VMsAffected = dcount(VM), SampleVMs = tostring(make_set(VM, 10)),
+            MaxRecoveredAfter = max(RecoveredAfter) by BurstTime = bin(TimeGenerated, 1m)
+| where VMsAffected > 0
+| project BurstTime, VMsAffected, SampleVMs, MaxRecoveredAfter
 ```
+
+> **Why three layers of protection:**
+> 1. **Recovery-aware** — each `VmDisconnectedEvent` is paired with the next `VmConnectedEvent` for the same VM; only fires if the VM stays disconnected > 5 minutes.
+> 2. **Burst-collapse** — simultaneous events grouped into 1-minute windows.
+> 3. **Fleet-wide suppression** — minutes where ≥ 10 distinct VMs flap are dropped entirely. This is the **vpxd / vCenter reconnect** signature: when vpxd restarts or the vCenter→ESXi management agent reconnects, vCenter momentarily marks every managed VM as `Disconnected`, then reconnects them seconds later. Without this filter, a single vCenter blip pages with ~70 disconnect events spanning every host — even Microsoft-managed appliances (`vCLS-*`, `TNT397-NSX-APP01/02`, `TNT397-HCX-MGR`, `TNT397-EVM-*`).
+>
+> vSAN health-check disposable VMs (`vsan-healthcheck-disposable-*`) are also excluded.
 
 #### VM-RemovedFromInventory
 
