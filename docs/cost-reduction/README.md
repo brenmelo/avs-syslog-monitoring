@@ -258,8 +258,8 @@ Incoming (monthly)         = 490 GB
 Dropped by transformation  = 477 GB    (the 'info' rows)
 Over-threshold drop        = 477 - 245 = 232 GB    ← billed at $2.01/GB
 
-Filtering charge           = 232 × $2.01 = $467 / month
-Ingestion (remaining 13 GB)= 13 × $2.01  = $25  / month
+Filtering charge           = 232 × $2.01 = $466 / month
+Ingestion (remaining 13 GB)= 13 × $2.01  = $26  / month
 ─────────────────────────────────────────────────────────
 New monthly bill           ≈ $492 / month
 Savings vs. $984           ≈ $492 / month  (≈ 50%)
@@ -273,10 +273,10 @@ Transformations to Analytics tables are exempt from the 50% filtering charge. Yo
 
 ```
 Filtering charge            = $0       (Sentinel exemption)
-Ingestion (remaining 13 GB) = 13 × $2.01 = $25 / month
+Ingestion (remaining 13 GB) = 13 × $2.01 = $26 / month
 ─────────────────────────────────────────────────────────
-New monthly bill            ≈ $25 / month
-Savings vs. $984            ≈ $959 / month  (≈ 97%)
+New monthly bill            ≈ $26 / month
+Savings vs. $984            ≈ $958 / month  (≈ 97%)
 ```
 
 > Numbers are rounded for readability. Replace $2.01 / GB with your region's Pay-As-You-Go rate (or your commitment-tier effective rate) for a precise figure.
