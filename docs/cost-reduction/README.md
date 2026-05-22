@@ -56,7 +56,7 @@ Workspace transformations run before the ingestion billing meter, so dropped rec
 
 In practice this means the maximum achievable saving on a single table via transformation is approximately 50% of the original ingestion cost. For AVS clusters where `'info'` represents 90%+ of the data, you will reach this floor.
 
-> **Exception — Microsoft Sentinel:** If Microsoft Sentinel is **already enabled** on the Log Analytics workspace (for SIEM/SOAR reasons), transformations to Analytics tables are **not subject** to the 50% filtering charge, regardless of how much data the transformation filters. The exemption is a free perk for existing Sentinel workspaces — do not enable Sentinel just to get it (Sentinel's own per-GB analysis charge applies to every table in the workspace and typically far exceeds any filtering-charge saving). See [Scenario B](#scenario-b--workspace-with-microsoft-sentinel-already-enabled) below for details.
+> **Exception — Microsoft Sentinel:** If Microsoft Sentinel is **already enabled** on the Log Analytics workspace (for SIEM/SOAR reasons), transformations to Analytics tables are **not subject** to the 50% filtering charge, regardless of how much data the transformation filters. The exemption is a free perk for existing Sentinel workspaces — do not enable Sentinel just to get it (Sentinel's own per-GB analysis charge applies to every table in the workspace and typically far exceeds any filtering-charge saving).
 
 See also: [Microsoft Learn — Cost for transformations (Analytics or Basic Logs)](https://learn.microsoft.com/azure/azure-monitor/data-collection/data-collection-transformations#analytics-or-basic-logs)
 
@@ -248,7 +248,7 @@ Using the numbers from Figure 1 (31-day window, $2.01 / GB Pay-As-You-Go) to mak
 - **Pre-change monthly cost:** ~506 GB ingested in 31 days → ~490 GB/month → 490 × $2.01 ≈ **$984 / month**.
 - **`'info'` share:** 493 GB / 31d ≈ 477 GB/month (97.5% of incoming).
 
-### Scenario A — Standard workspace (no Sentinel)
+### Cost math (standard workspace, no Sentinel)
 
 The 50% filtering charge applies. Microsoft bills you for whatever you drop above 50% of incoming:
 
@@ -267,61 +267,9 @@ Savings vs. $984           ≈ $492 / month  (≈ 50%)
 
 > **This is the ~50% floor in action:** no matter how aggressively you filter a single table, the most you can save on a non-Sentinel workspace is roughly half the original cost.
 
-### Scenario B — Workspace with Microsoft Sentinel **already** enabled
+> **Already running Microsoft Sentinel on this workspace?** The transformation still applies and the `AVSSyslog` line drops the same ~95–97%, but the Sentinel per-GB surcharge on every other table is unaffected — enabling Sentinel is not itself a cost-reduction step. See [Microsoft Sentinel billing](https://learn.microsoft.com/azure/sentinel/billing).
 
-> **⚠️ Read this first.** This scenario describes what the transformation saves you **if Sentinel is already enabled** on the workspace for SIEM/SOAR reasons. **It is NOT an argument for turning Sentinel on.** Enabling Sentinel to chase this saving almost always costs you more money than it saves — see the break-even box at the bottom of this section.
-
-On a Sentinel-enabled workspace, every ingested GB is billed at the Log Analytics rate **plus** the Microsoft Sentinel per-GB analysis surcharge. The transformation exemption removes the 50% filtering charge entirely — you only pay the combined rate on what survives the filter.
-
-Using illustrative PAYG simplified-tier rates ($2.01/GB Log Analytics + $2.00/GB Sentinel surcharge ≈ **$4.01/GB combined** — substitute your region/tier for precision):
-
-```
-Pre-change baseline (Sentinel workspace, no transformation)
-  Log Analytics       = 490 × $2.01 = $984    / month
-  Sentinel surcharge  = 490 × $2.00 = $980    / month
-  ────────────────────────────────────────────────────
-  Original bill       ≈                $1,964 / month
-
-Post-change (Sentinel exemption + transformation)
-  Filtering charge    =                $0      (Sentinel exemption)
-  Log Analytics       = 13 × $2.01  = $26     / month
-  Sentinel surcharge  = 13 × $2.00  = $26     / month
-  ──────────────────────────────────────────────────
-  New bill (this table) ≈              $52     / month
-  Savings vs. $1,964    ≈              $1,912  / month  (≈ 97%)
-```
-
-> The $1,912/month figure is the saving **from applying the transformation** on a workspace where Sentinel is already running. It is NOT the saving from enabling Sentinel. The 97% ratio matches Scenario A (the transformation drops the same 97% of volume); Sentinel just doubles the absolute dollars on both sides of the comparison — which is exactly why Sentinel itself is not a cost reducer.
-
-#### ⚠️ Should I enable Sentinel just for this saving? — Almost certainly no
-
-If you turn Sentinel on **solely** to get the filtering-charge exemption, the math works against you on any non-trivial workspace. Here is the break-even using the same illustrative $2/GB Sentinel surcharge:
-
-```
-What enabling Sentinel WOULD save you (vs. Scenario A on AVSSyslog):
-  $492  (Scenario A bill) - $52 (Scenario B AVSSyslog bill) = $440 / month  saved
-
-What enabling Sentinel WOULD cost you (surcharge on EVERY OTHER table):
-  (GB/month of all non-AVSSyslog data) × ~$2/GB = ??? / month  added
-
-Break-even: $440 / $2 = ~220 GB/month of other data in the workspace
-```
-
-| Other (non-`AVSSyslog`) ingestion in the workspace | Net effect of enabling Sentinel for this exemption |
-|---|---|
-| **< 220 GB / month** | Marginal net saving (and you take on Sentinel operational overhead) |
-| **≈ 220 GB / month** | Break-even |
-| **> 220 GB / month** | **Net cost increase** (often by hundreds or thousands of $/month) |
-
-Most production Log Analytics workspaces ingest **well over 220 GB/month** of other telemetry (`AzureDiagnostics`, `AppTraces`, `Perf`, `Heartbeat`, `ContainerLog`, non-AVS `Syslog`, etc.). For the typical customer, enabling Sentinel to chase this exemption **loses money**.
-
-**Decision rule:**
-- **You already need Sentinel for SIEM/SOAR** → enable it for *that* reason; treat the filtering-charge exemption as a free bonus. Scenario B applies.
-- **You just want a cheaper `AVSSyslog` bill** → apply the transformation, stay on a standard workspace, plan for **Scenario A (~50% savings, ~$492/month saved, zero new licensing)**. Do **not** enable Sentinel.
-
-> See: [Microsoft Sentinel billing](https://learn.microsoft.com/azure/sentinel/billing) and [Azure Monitor pricing](https://azure.microsoft.com/pricing/details/monitor/).
-
-> Numbers are rounded for readability. Replace $2.01 / GB (Log Analytics) and $2.00 / GB (Sentinel surcharge) with your region's PAYG or commitment-tier effective rates for a precise figure.
+> Numbers are rounded for readability. Replace $2.01 / GB with your region's PAYG or commitment-tier effective rate for a precise figure.
 
 ---
 
