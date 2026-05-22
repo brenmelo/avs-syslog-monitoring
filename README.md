@@ -17,6 +17,7 @@ Pre-built Azure Monitor **Workbook** (~40 panels) and **13 syslog alert rules** 
 - **3 Azure Resource Health alerts** — Per-private-cloud availability state alerts (Unavailable / Degraded / Unknown). First-party Azure platform signal that fires even when syslog ingestion has stopped — catches the "silent failure" case where syslog-based rules can't fire.
 - **Guided deployment wizards** — `createUiDefinition` portal experiences with action group pickers, alert toggles, threshold sliders, and region selection. One-click **Deploy to Azure** buttons for each artifact.
 - **Operational guidance** — Severity model explanation, action group strategy across 10 notification types (Email, SMS, Teams, Webhook, ITSM, Logic App, Function, Runbook, etc.), and known noisy events that are safely filtered.
+- **Cost reduction guide** — Step-by-step workspace transformation DCR walkthrough that drops `Severity = 'info'` (95%+ of `AVSSyslog` volume) before billing. Includes baseline/validation KQL, portal screenshots, the 50%-filtering math, and the Microsoft Sentinel exemption. See [docs/cost-reduction/](docs/cost-reduction/).
 
 > **✅ Validated against Microsoft docs:** All event-specific KQL patterns (host shutdown, VM disconnected, DNS failures, DFW logs, role changes, maintenance mode, etc.) match Microsoft's official [Queries for the AVSSyslog table](https://learn.microsoft.com/en-us/azure/azure-monitor/reference/queries/avssyslog) reference verbatim.
 
